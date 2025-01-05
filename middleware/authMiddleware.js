@@ -4,10 +4,27 @@ import User from "../model/UserModel.js";
 
 export const protect = asyncHandler(async (req, res, next) => {
   try {
-    const token = req.cookies.token;
-    console.log({ token });
+    let token;
+
+    // Check cookie first
+    token = req.cookies.token;
+
+    // If no cookie, check Authorization header
+    if (
+      !token &&
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer")
+    ) {
+      token = req.headers.authorization.split(" ")[1];
+    }
+
+    console.log(
+      "Token source:",
+      token ? (req.cookies.token ? "cookie" : "header") : "none"
+    );
 
     if (!token) {
+      console.log("No token found in cookies or headers");
       return res.status(401).json({ message: "Not authorized, please login!" });
     }
 
@@ -23,6 +40,7 @@ export const protect = asyncHandler(async (req, res, next) => {
 
     next();
   } catch (error) {
+    console.error("Auth Error:", error.message);
     return res.status(401).json({ message: "Not authorized, token failed!" });
   }
 });
