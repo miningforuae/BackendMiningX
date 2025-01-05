@@ -5,6 +5,7 @@ import User from "../model/UserModel.js";
 export const protect = asyncHandler(async (req, res, next) => {
   try {
     const token = req.cookies.token;
+    console.log({ token });
 
     if (!token) {
       return res.status(401).json({ message: "Not authorized, please login!" });
