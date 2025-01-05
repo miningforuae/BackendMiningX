@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        /* Modern color scheme and styling */
+        :root {
+            --primary: #2563eb;
+            --secondary: #1e40af;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --success: #10b981;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            line-height: 1.6;
+            background: #f3f4f6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .email-wrapper {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-banner {
+            background: var(--primary);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .header-banner h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .welcome-message {
+            margin-bottom: 2rem;
+        }
+
+        .machine-details {
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .machine-details h2 {
+            color: var(--primary);
+            margin-top: 0;
+            font-size: 18px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .detail-item {
+            padding: 1rem;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .detail-label {
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .detail-value {
+            color: var(--text);
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            background: var(--success);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .cta-button {
+            display: block;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            padding: 1rem 2rem;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 500;
+            margin: 2rem 0;
+            transition: background-color 0.2s;
+        }
+
+        .cta-button:hover {
+            background: var(--secondary);
+        }
+
+        .footer {
+            background: #f8fafc;
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .divider {
+            height: 1px;
+            background: #e5e7eb;
+            margin: 2rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-wrapper">
+        <div class="header-banner">
+            <h1>Your New Mining Machine is Ready! 🎉</h1>
+        </div>
+
+        <div class="content">
+            <div class="welcome-message">
+                <p>Hello <%= userName %>,</p>
+                <p>Great news! A new mining machine has been assigned to your account. Your mining journey begins now!</p>
+            </div>
+
+            <div class="machine-details">
+                <h2>Machine Details</h2>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">Machine Name</div>
+                        <div class="detail-value"><%= machineName %></div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-label">Assignment Date</div>
+                        <div class="detail-value"><%= assignedDate %></div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Montly Profit Rate</div>
+                        <div class="detail-value">$<%= profitRate %></div>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 1.5rem;">
+                    <span class="status-badge">Active & Mining</span>
+                </div>
+            </div>
+
+            <a href="#" class="cta-button">View Your Dashboard</a>
+
+            <div class="divider"></div>
+
+            <p style="color: var(--muted);">
+                Need help? Our support team is available 24/7 to assist you with any questions.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>This is an automated message from Mining System</p>
+            <p>© 2024 Mining Company. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
