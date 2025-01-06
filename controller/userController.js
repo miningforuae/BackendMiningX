@@ -39,11 +39,12 @@ export const registerUser = asyncHandler(async (req, res) => {
           // Generate token and set cookie
           const token = generateToken(user._id);
           res.cookie("token", token, {
-              path: "/",
-              httpOnly: true,
-              maxAge: 24 * 60 * 60 * 1000, // 1 day
-              sameSite: "None",  
-              secure: process.env.NODE_ENV === "production",
+            path: "/",
+            httpOnly: true,
+            maxAge: 24 * 60 * 60 * 1000,
+            sameSite: "None",
+            secure: true, // Always true for cross-origin cookies
+            domain: process.env.NODE_ENV === "production" ? ".railway.app" : "localhost"
           });
 
           try {

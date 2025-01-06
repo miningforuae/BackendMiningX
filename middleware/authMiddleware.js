@@ -5,7 +5,8 @@ import User from "../model/UserModel.js";
 export const protect = asyncHandler(async (req, res, next) => {
   try {
     let token;
-
+    console.log('Cookies:', req.cookies);
+    console.log('Headers:', req.headers);
     // Check cookie first
     token = req.cookies.token;
 

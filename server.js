@@ -27,7 +27,7 @@ routeFiles.forEach((file) => {
 // middleware
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "https://mining-x.vercel.app/", 
+    origin: process.env.CLIENT_URL || "https://mining-x.vercel.app", 
     credentials: true, 
   })
 );
@@ -35,7 +35,14 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "https://mining-x.vercel.app",
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 
 
 const server = async () => {
