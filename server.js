@@ -2,7 +2,10 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import connect from "./config.js";
 
+import fs from 'node:fs';
+import { setupAutoProfitUpdates } from "./cronJobs.js";
 const app = express();
 
 // Define allowed origins
@@ -54,6 +57,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
+const port = process.env.PORT || 8000;
 const routeFiles = fs.readdirSync("./routes");
 for (const file of routeFiles) {
   try {
