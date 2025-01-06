@@ -38,15 +38,15 @@ export const registerUser = asyncHandler(async (req, res) => {
       if (user) {
           // Generate token and set cookie
           const token = generateToken(user._id);
-          res.cookie("token", token, {
+          const cookieOptions = {
             httpOnly: true,
-            secure: true,
-            sameSite: "none",
-            path: "/",
-            maxAge: 24 * 60 * 60 * 1000,
-            // Remove domain setting as it might be causing issues
-          });
-
+            secure: true, // Must be true for cross-origin cookies
+            sameSite: 'none', // Required for cross-origin
+            path: '/',
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+          };
+          res.cookie('token', token, cookieOptions);
+        
           try {
               await sendEmail(
                   email,
@@ -105,14 +105,14 @@ export const loginUser = asyncHandler(async (req, res) => {
 
   const token = generateToken(user._id);
 
-  res.cookie("token", token, {
+  const cookieOptions = {
     httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    path: "/",
-    maxAge: 24 * 60 * 60 * 1000,
-    // Remove domain setting as it might be causing issues
-  });
+    secure: true, // Must be true for cross-origin cookies
+    sameSite: 'none', // Required for cross-origin
+    path: '/',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  };
+  res.cookie('token', token, cookieOptions);
 
   
   res.status(200).json({
