@@ -20,14 +20,14 @@ routeFiles.forEach((file) => {
       app.use("/api/v1", route.default);
     })
     .catch((err) => {
-      console.log("Failed to load route file", err);
+      console.error(`Failed to load route file: ${file}`, err.message);
     });
 });
 
 // middleware
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "*", 
+    origin: process.env.CLIENT_URL || "https://mining-x.vercel.app/", 
     credentials: true, 
   })
 );
