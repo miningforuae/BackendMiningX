@@ -25,21 +25,25 @@ routeFiles.forEach((file) => {
 });
 
 // middleware
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || "https://mining-x.vercel.app", 
-    credentials: true, 
-  })
-);
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Expose-Headers', 'Set-Cookie');
+  next();
+});
+app.options('*', cors()); // enable pre-flight
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "https://mining-x.vercel.app",
+    origin: [
+      'https://mining-x.vercel.app',
+      'https://mining-e4zz5rnqu-miningforuaes-projects.vercel.app'
+    ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
