@@ -1,55 +1,57 @@
+// server.js
 import express from "express";
-import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import fs from 'node:fs';
-import { setupAutoProfitUpdates } from "./cronJobs.js";
 
-dotenv.config();
 const app = express();
-const port = process.env.PORT || 8000;
 
-// CORS configuration - MUST come before routes
+// Define allowed origins
 const allowedOrigins = [
   'https://mining-x.vercel.app',
   'https://mining-e4zz5rnqu-miningforuaes-projects.vercel.app',
-  // Add any other origins you need
-];
+  // Add local development URL if needed
+  process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : null
+].filter(Boolean);
 
-// Middleware
-app.use(cookieParser());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.use(cors({
+// CORS configuration
+const corsOptions = {
   origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) === -1) {
-      return callback(new Error('CORS not allowed'), false);
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
     }
-    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-  exposedHeaders: ['Set-Cookie']
-}));
+  exposedHeaders: ['Set-Cookie'],
+  maxAge: 86400 // Preflight results can be cached for 24 hours
+};
 
-// Add security headers
+// Apply CORS middleware
+app.use(cors(corsOptions));
+
+// Additional security headers middleware
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Expose-Headers', 'Set-Cookie');
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,UPDATE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept');
   
   // Handle preflight
   if (req.method === 'OPTIONS') {
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    return res.status(200).json({});
+    return res.status(200).end();
   }
   next();
 });
+
+// Cookie parser middleware with secure options
+app.use(cookieParser());
+
+// Body parser middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Routes
 const routeFiles = fs.readdirSync("./routes");
