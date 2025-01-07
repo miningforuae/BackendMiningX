@@ -11,10 +11,10 @@ const app = express();
 const allowedOrigins = [
   'https://mining-x.vercel.app',
   'https://mining-e4zz5rnqu-miningforuaes-projects.vercel.app',
-  'http://localhost:3000',  // Local development
-  'http://localhost:5173',  // Vite default port
-  'http://127.0.0.1:3000', // Alternative localhost
-  'http://127.0.0.1:5173'  // Alternative localhost for Vite
+  'http://localhost:3000', 
+  'http://localhost:5173',  
+  'http://127.0.0.1:3000', 
+  'http://127.0.0.1:5173' 
 ].filter(Boolean);
 
 // CORS configuration
