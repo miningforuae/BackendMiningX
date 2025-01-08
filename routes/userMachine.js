@@ -8,7 +8,11 @@ import {
   getAllUserMachines,
   getProfitUpdateStatus,
   manualProfitUpdate,
-
+  // Add new imports
+  processWithdrawal,
+  getUserTransactions,
+  getAllTransactions,
+  getUserTotalProfit
 } from '../controller/UserMachine.js';
 
 const router = express.Router();
