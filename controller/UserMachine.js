@@ -344,3 +344,66 @@ export const manualProfitUpdate = async (req, res) => {
   }
 };
 
+
+
+// Get user's current total profit (updated version)
+export const getUserTotalProfit = async (req, res) => {
+  try {
+    const userIdentifier = req.params.userIdentifier;
+    
+    console.log('=== Get User Total Profit API ===');
+    console.log('Received identifier:', userIdentifier);
+
+    let user;
+    // Check if the identifier is a valid MongoDB ObjectId
+    if (mongoose.Types.ObjectId.isValid(userIdentifier)) {
+      user = await User.findById(userIdentifier);
+    } else {
+      // If not a valid ObjectId, try email lookup
+      const decodedIdentifier = decodeURIComponent(userIdentifier);
+      user = await User.findOne({ email: decodedIdentifier });
+    }
+
+    if (!user) {
+      return res.status(404).json({ 
+        message: 'User not found',
+        identifier: userIdentifier 
+      });
+    }
+
+    const userMachines = await UserMachine.find({ 
+      user: user._id,
+      status: 'active'
+    }).populate('machine');
+
+    let totalProfit = 0;
+    const machineDetails = [];
+
+    for (const machine of userMachines) {
+      const profit = machine.monthlyProfitAccumulated || 0;
+      totalProfit += profit;
+      machineDetails.push({
+        machineId: machine.machine._id,
+        machineName: machine.machine.machineName,
+        profit: profit,
+        assignedDate: machine.assignedDate,
+        lastProfitUpdate: machine.lastProfitUpdate || machine.assignedDate
+      });
+    }
+
+    res.status(200).json({
+      userId: user._id,
+      userEmail: user.email,
+      userName: `${user.firstName} ${user.lastName}`,
+      totalMachines: userMachines.length,
+      totalProfit: totalProfit,
+      machines: machineDetails.sort((a, b) => b.profit - a.profit) // Sort by profit descending
+    });
+  } catch (error) {
+    console.error('Error in getUserTotalProfit:', error);
+    res.status(500).json({ 
+      message: 'Error calculating total profit',
+      error: error.message 
+    });
+  }
+};
