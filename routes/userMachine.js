@@ -8,11 +8,7 @@ import {
   getAllUserMachines,
   getProfitUpdateStatus,
   manualProfitUpdate,
-  // Add new imports
-  processWithdrawal,
-  getUserTransactions,
-  getAllTransactions,
-  getUserTotalProfit
+
 } from '../controller/UserMachine.js';
 
 const router = express.Router();
@@ -26,10 +22,6 @@ router.patch('/profit/manual/:userMachineId', protect, adminMiddleware, manualPr
 router.patch('/profit/:userMachineId', protect, adminMiddleware, updateMonthlyProfit);
 router.delete('/:userMachineId', protect, adminMiddleware, removeUserMachine);
 
-// New routes for withdrawal and transactions
-router.post('/withdrawal', protect, processWithdrawal);  // User can withdraw
-router.get('/transactions/:userIdentifier', protect, getUserTransactions);
-router.get('/admin/transactions', protect, adminMiddleware, getAllTransactions);  // Admin can view all transactions
-router.get('/total-profit/:userIdentifier', protect, getUserTotalProfit);
+
 
 export default router;

@@ -1,0 +1,31 @@
+<!-- views/withdrawalStatus.ejs -->
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; }
+        .container { padding: 20px; max-width: 600px; margin: 0 auto; }
+        .amount { font-size: 24px; font-weight: bold; color: #2c3e50; }
+        .status { padding: 10px; border-radius: 5px; display: inline-block; }
+        .approved { background-color: #27ae60; color: white; }
+        .rejected { background-color: #e74c3c; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Withdrawal Request Update</h2>
+        <p>Dear <%= userName %>,</p>
+        <p>Your withdrawal request has been <span class="status <%= status.toLowerCase() %>"><%= status %></span></p>
+        <p>Amount: <span class="amount">$<%= amount.toFixed(2) %></span></p>
+        <p>Transaction ID: <%= transactionId %></p>
+        <% if (adminComment) { %>
+            <p>Admin Comment: <%= adminComment %></p>
+        <% } %>
+        <% if (status === 'APPROVED') { %>
+            <p>The funds will be transferred to your account within the next business day.</p>
+        <% } %>
+        <p>Best regards,<br>Mining Team</p>
+    </div>
+</body>
+</html>
+Last edited 4 m

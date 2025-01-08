@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; }
+        .container { padding: 20px; max-width: 600px; margin: 0 auto; }
+        .amount { font-size: 24px; font-weight: bold; color: #2c3e50; }
+        .status { padding: 10px; border-radius: 5px; display: inline-block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Withdrawal Request Submitted</h2>
+        <p>Dear <%= userName %>,</p>
+        <p>Your withdrawal request has been successfully submitted.</p>
+        <p>Amount: <span class="amount">$<%= amount.toFixed(2) %></span></p>
+        <p>Request Date: <%= requestDate %></p>
+        <p>Transaction ID: <%= transactionId %></p>
+        <p>Your request is pending admin approval. We will notify you once it's processed.</p>
+        <p>Best regards,<br>Mining Team</p>
+    </div>
+</body>
+</html>

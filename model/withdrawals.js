@@ -19,10 +19,25 @@ const transactionSchema = new mongoose.Schema({
       enum: ['withdrawal', 'profit'],
       required: true
     },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending'
+    },
+    adminComment: {
+      type: String
+    },
+    processedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    processedAt: {
+      type: Date
+    },
     details: {
       type: String
     }
-  });
-  
-  const Transaction = mongoose.model('Transaction', transactionSchema);
-  export default Transaction
+});
+
+const Transaction = mongoose.model('Transaction', transactionSchema);
+export default Transaction;
