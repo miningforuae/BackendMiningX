@@ -239,21 +239,33 @@ export const getPendingWithdrawals = async (req, res) => {
 };
 
 // Get user's withdrawal history
+// In withdrawalController.js
 export const getUserWithdrawals = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { email } = req.query;
     const { page = 1, limit = 10 } = req.query;
 
+    // First find the user by email
+    const user = await User.findOne({ email: email.toLowerCase() });
+    
+    if (!user) {
+      return res.status(404).json({ 
+        message: 'User not found with provided email'
+      });
+    }
+
+    // Then find their withdrawals using the user's _id
     const withdrawals = await Transaction.find({ 
-      user: userId,
+      user: user._id,
       type: 'withdrawal'
     })
       .sort({ transactionDate: -1 })
       .skip((parseInt(page) - 1) * parseInt(limit))
-      .limit(parseInt(limit));
+      .limit(parseInt(limit))
+      .populate('user', 'email firstName lastName');
 
     const total = await Transaction.countDocuments({ 
-      user: userId,
+      user: user._id,
       type: 'withdrawal'
     });
 
