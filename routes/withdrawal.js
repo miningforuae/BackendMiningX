@@ -10,13 +10,11 @@ import {
 
 const router = express.Router();
 
-// User routes
-router.post('/request', protect, requestWithdrawal);
-router.get('/user/:userId', protect, getUserWithdrawals);
-
-// Admin routes
-router.post('/process', protect, adminMiddleware, processWithdrawalRequest);
-router.get('/pending', protect, adminMiddleware, getPendingWithdrawals);
-router.get('/stats', protect, adminMiddleware, getWithdrawalStats);
+// Route prefix: /api/v1/withdrawals
+router.post('/withdrawals/request', protect, requestWithdrawal);
+router.post('/withdrawals/process', protect, adminMiddleware, processWithdrawalRequest);
+router.get('/withdrawals/pending', protect, adminMiddleware, getPendingWithdrawals);
+router.get('/withdrawals/user/:userId', protect, getUserWithdrawals);
+router.get('/withdrawals/stats', protect, adminMiddleware, getWithdrawalStats);
 
 export default router;
