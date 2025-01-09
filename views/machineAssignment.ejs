@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        /* Modern color scheme and styling */
         :root {
             --primary: #2563eb;
             --secondary: #1e40af;
             --text: #1f2937;
             --muted: #6b7280;
-            --success: #10b981;
+            --success: #22c55e;
+            --background: #f8fafc;
         }
 
         body {
@@ -17,33 +17,38 @@
             line-height: 1.6;
             background: #f3f4f6;
             margin: 0;
-            padding: 0;
+            padding: 20px;
         }
 
         .email-wrapper {
             max-width: 600px;
             margin: 0 auto;
             background: white;
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         .header-banner {
-            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
-            padding: 2rem;
+            padding: 2.5rem 2rem;
             text-align: center;
         }
 
         .header-banner h1 {
             margin: 0;
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 600;
         }
 
+        .header-banner p {
+            margin: 10px 0 0;
+            opacity: 0.9;
+        }
+
         .content {
-            padding: 2rem;
+            padding: 2.5rem;
         }
 
         .welcome-message {
@@ -51,35 +56,54 @@
         }
 
         .machine-details {
-            background: #f8fafc;
-            border-radius: 6px;
-            padding: 1.5rem;
+            background: var(--background);
+            border-radius: 12px;
+            padding: 2rem;
             margin-bottom: 2rem;
         }
 
         .machine-details h2 {
             color: var(--primary);
-            margin-top: 0;
-            font-size: 18px;
+            margin: 0 0 1.5rem;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .machine-details h2:before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 2px;
         }
 
         .detail-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
+            gap: 1.5rem;
         }
 
         .detail-item {
-            padding: 1rem;
+            padding: 1.25rem;
             background: white;
-            border-radius: 4px;
+            border-radius: 8px;
             border: 1px solid #e5e7eb;
+            transition: transform 0.2s;
+        }
+
+        .detail-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
         .detail-label {
             color: var(--muted);
             font-size: 14px;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
+            font-weight: 500;
         }
 
         .detail-value {
@@ -88,14 +112,33 @@
             font-size: 16px;
         }
 
+        .status-container {
+            text-align: center;
+            margin-top: 2rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+
         .status-badge {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             background: var(--success);
             color: white;
-            padding: 4px 12px;
+            padding: 6px 16px;
             border-radius: 999px;
             font-size: 14px;
             font-weight: 500;
+        }
+
+        .status-badge:before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
         }
 
         .cta-button {
@@ -104,23 +147,33 @@
             color: white;
             text-decoration: none;
             padding: 1rem 2rem;
-            border-radius: 6px;
+            border-radius: 8px;
             text-align: center;
             font-weight: 500;
             margin: 2rem 0;
-            transition: background-color 0.2s;
+            transition: all 0.2s;
         }
 
         .cta-button:hover {
             background: var(--secondary);
+            transform: translateY(-1px);
         }
 
         .footer {
-            background: #f8fafc;
+            background: var(--background);
             padding: 1.5rem;
             text-align: center;
             color: var(--muted);
             font-size: 14px;
+        }
+
+        .support-section {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            margin: 2rem 0;
         }
 
         .divider {
@@ -134,16 +187,17 @@
     <div class="email-wrapper">
         <div class="header-banner">
             <h1>Your New Mining Machine is Ready! 🎉</h1>
+            <p>Welcome to your enhanced mining journey</p>
         </div>
 
         <div class="content">
             <div class="welcome-message">
                 <p>Hello <%= userName %>,</p>
-                <p>Great news! A new mining machine has been assigned to your account. Your mining journey begins now!</p>
+                <p>Excellent news! Your new mining machine has been successfully assigned to your account. Here are all the important details about your machine:</p>
             </div>
 
             <div class="machine-details">
-                <h2>Machine Details</h2>
+                <h2>Machine Specifications</h2>
                 <div class="detail-grid">
                     <div class="detail-item">
                         <div class="detail-label">Machine Name</div>
@@ -151,27 +205,42 @@
                     </div>
                     
                     <div class="detail-item">
+                        <div class="detail-label">Machine Price</div>
+                        <div class="detail-value">$<%= machinePrice %></div>
+                    </div>
+
+                    <div class="detail-item">
+                        <div class="detail-label">Monthly Profit Rate</div>
+                        <div class="detail-value">$<%= profitRate %></div>
+                    </div>
+
+                    <div class="detail-item">
+                        <div class="detail-label">Power Consumption</div>
+                        <div class="detail-value"><%= powerConsumption %> W/h</div>
+                    </div>
+
+                    <div class="detail-item">
                         <div class="detail-label">Assignment Date</div>
                         <div class="detail-value"><%= assignedDate %></div>
                     </div>
+
                     <div class="detail-item">
-                        <div class="detail-label">Montly Profit Rate</div>
-                        <div class="detail-value">$<%= profitRate %></div>
+                        <div class="detail-label">Quantity</div>
+                        <div class="detail-value"><%= quantity %> unit(s)</div>
                     </div>
                 </div>
 
-                <div style="text-align: center; margin-top: 1.5rem;">
+                <div class="status-container">
                     <span class="status-badge">Active & Mining</span>
                 </div>
             </div>
 
-            <a href="#" class="cta-button">View Your Dashboard</a>
+            <a href="#" class="cta-button">View Your Mining Dashboard</a>
 
-            <div class="divider"></div>
-
-            <p style="color: var(--muted);">
-                Need help? Our support team is available 24/7 to assist you with any questions.
-            </p>
+            <div class="support-section">
+                <h3 style="color: var(--primary); margin-top: 0;">Need Assistance?</h3>
+                <p style="margin-bottom: 0;">Our support team is available 24/7 to help you with any questions or concerns.</p>
+            </div>
         </div>
 
         <div class="footer">

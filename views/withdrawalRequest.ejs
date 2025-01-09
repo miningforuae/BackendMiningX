@@ -1,23 +1,198 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdrawal Request Confirmation</title>
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; }
-        .container { padding: 20px; max-width: 600px; margin: 0 auto; }
-        .amount { font-size: 24px; font-weight: bold; color: #2c3e50; }
-        .status { padding: 10px; border-radius: 5px; display: inline-block; }
+        /* Reset styles for email clients */
+        body, table, td, div, p, a {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Container styles */
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+        }
+
+        /* Header styles */
+        .header {
+            text-align: center;
+            padding: 30px 0;
+            background-color: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .logo {
+            width: 150px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        /* Content styles */
+        .content {
+            padding: 30px;
+            background-color: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .greeting {
+            font-size: 18px;
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+
+        .amount-container {
+            text-align: center;
+            margin: 25px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .amount {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #edf2f7;
+            color: #4a5568;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+
+        .transaction-details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .transaction-id {
+            font-family: monospace;
+            color: #4a5568;
+            font-size: 14px;
+        }
+
+        .next-steps {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #fffaf0;
+            border-radius: 8px;
+            border-left: 4px solid #ed8936;
+        }
+
+        .timeline {
+            margin: 25px 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 30px;
+            margin-bottom: 15px;
+            color: #4a5568;
+        }
+
+        .timeline-item:before {
+            content: "●";
+            position: absolute;
+            left: 0;
+            color: #4299e1;
+        }
+
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            color: #718096;
+            font-size: 14px;
+        }
+
+        /* Responsive styles */
+        @media screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+                padding: 10px !important;
+            }
+            
+            .content {
+                padding: 20px !important;
+            }
+            
+            .amount {
+                font-size: 28px !important;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Withdrawal Request Submitted</h2>
-        <p>Dear <%= userName %>,</p>
-        <p>Your withdrawal request has been successfully submitted.</p>
-        <p>Amount: <span class="amount">$<%= amount.toFixed(2) %></span></p>
-        <p>Request Date: <%= requestDate %></p>
-        <p>Transaction ID: <%= transactionId %></p>
-        <p>Your request is pending admin approval. We will notify you once it's processed.</p>
-        <p>Best regards,<br>Mining Team</p>
-    </div>
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr>
+            <td>
+                <div class="email-container">
+                    <div class="header">
+                        <img src="/api/placeholder/150/50" alt="Mining Logo" class="logo" />
+                        <h1 style="color: #2d3748; font-size: 24px; margin: 0;">Withdrawal Request Submitted</h1>
+                    </div>
+                    
+                    <div class="content">
+                        <p class="greeting">Dear <%= userName %>,</p>
+                        
+                        <p style="color: #2d3748;">We've received your withdrawal request and it's been successfully submitted for processing.</p>
+                        
+                        <div class="amount-container">
+                            <p style="margin-bottom: 10px; color: #4a5568;">Withdrawal Amount</p>
+                            <div class="amount">$<%= amount.toFixed(2) %></div>
+                            <span class="status-badge">Pending Review</span>
+                        </div>
+                        
+                        <div class="transaction-details">
+                            <p style="margin-bottom: 5px; color: #4a5568;">Request Details:</p>
+                            <p class="transaction-id">ID: <%= transactionId %></p>
+                            <p style="color: #4a5568; margin-top: 10px;">
+                                Submitted: <%= requestDate %>
+                            </p>
+                        </div>
+                        
+                        <div class="next-steps">
+                            <p style="margin: 0; color: #c05621;">
+                                <strong>What's Next?</strong>
+                            </p>
+                            <ul class="timeline">
+                                <li class="timeline-item">Your request is currently under review by our admin team</li>
+                                <li class="timeline-item">You'll receive an email notification once your request is processed</li>
+                                <li class="timeline-item">If approved, funds will be transferred within one business day</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="footer">
+                            <p>Best regards,<br>
+                            <strong>Mining Team</strong></p>
+                            <p style="margin-top: 15px; font-size: 12px;">
+                                This is an automated message. Please do not reply to this email.
+                                If you have any questions about your withdrawal request, please contact our support team.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

@@ -1,31 +1,203 @@
-<!-- views/withdrawalStatus.ejs -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdrawal Status Update</title>
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; }
-        .container { padding: 20px; max-width: 600px; margin: 0 auto; }
-        .amount { font-size: 24px; font-weight: bold; color: #2c3e50; }
-        .status { padding: 10px; border-radius: 5px; display: inline-block; }
-        .approved { background-color: #27ae60; color: white; }
-        .rejected { background-color: #e74c3c; color: white; }
+        /* Reset styles for email clients */
+        body, table, td, div, p, a {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Container styles */
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+        }
+
+        /* Header styles */
+        .header {
+            text-align: center;
+            padding: 30px 0;
+            background-color: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .logo {
+            width: 150px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        /* Content styles */
+        .content {
+            padding: 30px;
+            background-color: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .greeting {
+            font-size: 18px;
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+
+        .amount-container {
+            text-align: center;
+            margin: 25px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .amount {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .status-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .status {
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 16px;
+            display: inline-block;
+        }
+
+        .status.approved {
+            background-color: #68d391;
+            color: #234e52;
+        }
+
+        .status.rejected {
+            background-color: #fc8181;
+            color: #742a2a;
+        }
+
+        .transaction-details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .transaction-id {
+            font-family: monospace;
+            color: #4a5568;
+            font-size: 14px;
+        }
+
+        .admin-comment {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #ebf8ff;
+            border-left: 4px solid #4299e1;
+            border-radius: 4px;
+        }
+
+        .next-steps {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f0fff4;
+            border-radius: 8px;
+        }
+
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            color: #718096;
+            font-size: 14px;
+        }
+
+        /* Responsive styles */
+        @media screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+                padding: 10px !important;
+            }
+            
+            .content {
+                padding: 20px !important;
+            }
+            
+            .amount {
+                font-size: 28px !important;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Withdrawal Request Update</h2>
-        <p>Dear <%= userName %>,</p>
-        <p>Your withdrawal request has been <span class="status <%= status.toLowerCase() %>"><%= status %></span></p>
-        <p>Amount: <span class="amount">$<%= amount.toFixed(2) %></span></p>
-        <p>Transaction ID: <%= transactionId %></p>
-        <% if (adminComment) { %>
-            <p>Admin Comment: <%= adminComment %></p>
-        <% } %>
-        <% if (status === 'APPROVED') { %>
-            <p>The funds will be transferred to your account within the next business day.</p>
-        <% } %>
-        <p>Best regards,<br>Mining Team</p>
-    </div>
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr>
+            <td>
+                <div class="email-container">
+                    <div class="header">
+                        <img src="/api/placeholder/150/50" alt="Mining Logo" class="logo" />
+                        <h1 style="color: #2d3748; font-size: 24px; margin: 0;">Withdrawal Status Update</h1>
+                    </div>
+                    
+                    <div class="content">
+                        <p class="greeting">Dear <%= userName %>,</p>
+                        
+                        <div class="status-container">
+                            <span class="status <%= status.toLowerCase() %>"><%= status %></span>
+                        </div>
+                        
+                        <div class="amount-container">
+                            <p style="margin-bottom: 10px; color: #4a5568;">Withdrawal Amount</p>
+                            <div class="amount">$<%= amount.toFixed(2) %></div>
+                        </div>
+                        
+                        <div class="transaction-details">
+                            <p style="margin-bottom: 5px; color: #4a5568;">Transaction Details:</p>
+                            <p class="transaction-id">ID: <%= transactionId %></p>
+                            <p style="color: #4a5568; margin-top: 10px;">
+                                Date: <%= new Date().toLocaleDateString('en-US', { 
+                                    weekday: 'long',
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                }) %>
+                            </p>
+                        </div>
+                        
+                     
+                        
+                        <% if (status === 'APPROVED') { %>
+                        <div class="next-steps">
+                            <p style="margin: 0; color: #2f855a;">
+                                <strong>Next Steps:</strong><br>
+                                The funds will be transferred to your registered account within the next business day. You'll receive another notification once the transfer is complete.
+                            </p>
+                        </div>
+                        <% } %>
+                        
+                        <div class="footer">
+                            <p>Best regards,<br>
+                            <strong>Mining Team</strong></p>
+                            <p style="margin-top: 15px; font-size: 12px;">
+                                This is an automated message. Please do not reply to this email.
+                                If you have any questions, please contact our support team.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>
-Last edited 4 m
