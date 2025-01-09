@@ -328,3 +328,79 @@ export const getWithdrawalStats = async (req, res) => {
     });
   }
 };
+
+
+// Add this to your withdrawalController.js file
+
+export const getAllWithdrawals = async (req, res) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 20, 
+      startDate, 
+      endDate, 
+      status,
+      sortBy = 'transactionDate',
+      sortOrder = 'desc'
+    } = req.query;
+
+    // Build filter object
+    const filter = { type: 'withdrawal' };
+
+    // Add date range filter if provided
+    if (startDate || endDate) {
+      filter.transactionDate = {};
+      if (startDate) filter.transactionDate.$gte = new Date(startDate);
+      if (endDate) filter.transactionDate.$lte = new Date(endDate);
+    }
+
+    // Add status filter if provided
+    if (status && ['pending', 'approved', 'rejected'].includes(status)) {
+      filter.status = status;
+    }
+
+    // Build sort object
+    const sort = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // Execute query with pagination
+    const withdrawals = await Transaction.find(filter)
+      .sort(sort)
+      .skip((parseInt(page) - 1) * parseInt(limit))
+      .limit(parseInt(limit))
+      .populate('user', 'firstName lastName email')
+      .populate('processedBy', 'firstName lastName email');
+
+    // Get total count for pagination
+    const total = await Transaction.countDocuments(filter);
+
+    // Calculate total amount
+    const totalAmount = await Transaction.aggregate([
+      { $match: filter },
+      { $group: { _id: null, total: { $sum: '$amount' }}}
+    ]);
+
+    res.status(200).json({
+      withdrawals,
+      totalPages: Math.ceil(total / parseInt(limit)),
+      currentPage: parseInt(page),
+      totalWithdrawals: total,
+      totalAmount: totalAmount[0]?.total || 0,
+      filters: {
+        startDate,
+        endDate,
+        status
+      },
+      sorting: {
+        sortBy,
+        sortOrder
+      }
+    });
+  } catch (error) {
+    console.error('Error retrieving all withdrawals:', error);
+    res.status(500).json({ 
+      message: 'Error retrieving withdrawals',
+      error: error.message 
+    });
+  }
+};

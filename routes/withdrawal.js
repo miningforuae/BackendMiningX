@@ -5,7 +5,8 @@ import {
   processWithdrawalRequest,
   getPendingWithdrawals,
   getUserWithdrawals,
-  getWithdrawalStats
+  getWithdrawalStats,
+  getAllWithdrawals
 } from '../controller/withdrawalContoller.js';
 
 const router = express.Router();
@@ -15,5 +16,6 @@ router.post('/withdrawals/request', protect, requestWithdrawal);
 router.post('/withdrawals/process', protect, adminMiddleware, processWithdrawalRequest);
 router.get('/withdrawals/pending', protect, adminMiddleware, getPendingWithdrawals);
 router.get('/withdrawals/by-email', protect, getUserWithdrawals);router.get('/withdrawals/stats', protect, adminMiddleware, getWithdrawalStats);
-
+// Add this to your existing router
+router.get('/withdrawals/all', protect, adminMiddleware, getAllWithdrawals);
 export default router;
