@@ -52,9 +52,11 @@ export const assignMachineToUser = async (req, res) => {
       machineName: machine.machineName.toString(),
       quantity: quantity,
       assignedDate: new Date().toLocaleDateString(),
-      profitRate: machine.ProfitAdmin.toString()
+      profitRate: machine.ProfitAdmin.toString(),
+      // Always provide a value, even if it's 'N/A'
+      machinePrice: (machine.price || 'N/A').toString(),
+      powerConsumption: (machine.powerConsumption || 'N/A').toString()
     };
-
     await sendEmail(
       user.email,
       'New Mining Machines Assigned',
