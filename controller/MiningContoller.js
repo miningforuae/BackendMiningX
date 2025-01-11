@@ -141,7 +141,7 @@ export const deleteMiningMachine = async (req, res) => {
       });
     }
 
-    await miningMachine.remove();
+    await miningMachine.deleteOne();
 
     res.status(StatusCodes.OK).json({
       success: true,
