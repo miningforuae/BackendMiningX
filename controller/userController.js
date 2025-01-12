@@ -200,3 +200,36 @@ export const profile = asyncHandler(async (req, res) => {
 });
 
 
+export const updateProfile = asyncHandler(async (req, res) => {
+  const { firstName, lastName, country, phoneNumber } = req.body;
+
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update only the fields that are provided
+    if (firstName) user.firstName = firstName;
+    if (lastName) user.lastName = lastName;
+    if (country) user.country = country;
+    if (phoneNumber) user.phoneNumber = phoneNumber;
+
+    // Save the updated user
+    const updatedUser = await user.save();
+
+    res.status(200).json({
+      _id: updatedUser._id,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      country: updatedUser.country,
+      phoneNumber: updatedUser.phoneNumber
+    });
+  } catch (error) {
+    console.error("Update profile error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
