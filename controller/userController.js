@@ -164,6 +164,7 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
       lastName: user.lastName,
       email: user.email,
       role:user.role,
+      phoneNumber:user.phoneNumber,
       country: user.country, // Include country in response
     });
   } catch (error) {
