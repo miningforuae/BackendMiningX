@@ -538,6 +538,13 @@ export const getUserTotalProfit = async (req, res) => {
     console.log('=== Get User Total Profit API ===');
     console.log('Received identifier:', userIdentifier);
 
+    // Input validation
+    if (!userIdentifier) {
+      return res.status(400).json({
+        message: 'User identifier is required'
+      });
+    }
+
     let user;
     // Check if the identifier is a valid MongoDB ObjectId
     if (mongoose.Types.ObjectId.isValid(userIdentifier)) {
@@ -545,49 +552,70 @@ export const getUserTotalProfit = async (req, res) => {
     } else {
       // If not a valid ObjectId, try email lookup
       const decodedIdentifier = decodeURIComponent(userIdentifier);
-      user = await User.findOne({ email: decodedIdentifier });
+      console.log('Looking up user by email:', decodedIdentifier);
+      user = await User.findOne({ email: decodedIdentifier.toLowerCase() }); // Add toLowerCase()
     }
 
+    // Early return if user not found
     if (!user) {
-      return res.status(404).json({ 
+      console.log('User not found for identifier:', userIdentifier);
+      return res.status(404).json({
         message: 'User not found',
-        identifier: userIdentifier 
+        identifier: userIdentifier
       });
     }
 
-    const userMachines = await UserMachine.find({ 
+    console.log('Found user:', user._id);
+
+    // Find active machines for user
+    const userMachines = await UserMachine.find({
       user: user._id,
       status: 'active'
     }).populate('machine');
+
+    console.log('Found machines count:', userMachines.length);
 
     let totalProfit = 0;
     const machineDetails = [];
 
     for (const machine of userMachines) {
+      // Ensure machine exists and has required properties
+      if (!machine.machine) {
+        console.log('Warning: Machine reference missing for UserMachine:', machine._id);
+        continue;
+      }
+
       const profit = machine.monthlyProfitAccumulated || 0;
       totalProfit += profit;
+      
       machineDetails.push({
         machineId: machine.machine._id,
-        machineName: machine.machine.machineName,
+        machineName: machine.machine.machineName || 'Unknown Machine',
         profit: profit,
         assignedDate: machine.assignedDate,
         lastProfitUpdate: machine.lastProfitUpdate || machine.assignedDate
       });
     }
 
-    res.status(200).json({
+    const response = {
       userId: user._id,
       userEmail: user.email,
-      userName: `${user.firstName} ${user.lastName}`,
+      userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown User',
       totalMachines: userMachines.length,
       totalProfit: totalProfit,
-      machines: machineDetails.sort((a, b) => b.profit - a.profit) // Sort by profit descending
-    });
+      machines: machineDetails.sort((a, b) => b.profit - a.profit)
+    };
+
+    console.log('Sending response:', { ...response, machines: `[${response.machines.length} items]` });
+
+    res.status(200).json(response);
+
   } catch (error) {
     console.error('Error in getUserTotalProfit:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Error calculating total profit',
-      error: error.message 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
