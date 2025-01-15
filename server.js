@@ -9,8 +9,8 @@ const app = express();
 
 // Define allowed origins
 const allowedOrigins = [
-  'https://mining-x.vercel.app',
-  'https://mining-e4zz5rnqu-miningforuaes-projects.vercel.app',
+  'https://www.theminerex.com',
+  'https://mining-x-miningforuaes-projects.vercel.app',
   'http://localhost:3000', 
   'http://localhost:5173',  
   'http://127.0.0.1:3000', 
