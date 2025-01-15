@@ -20,7 +20,6 @@ const allowedOrigins = [
 // CORS configuration
 const corsOptions = {
   origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
       return callback(null, true);
     }
@@ -28,7 +27,7 @@ const corsOptions = {
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.log('Blocked origin:', origin); // Helpful for debugging
+      console.log('Blocked origin:', origin); 
       callback(new Error('Not allowed by CORS'));
     }
   },
