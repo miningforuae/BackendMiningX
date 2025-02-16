@@ -26,10 +26,7 @@ const miningMachineSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Monthly profit estimation is required']
   },
-  ProfitAdmin: {
-    type: Number,
-    required: [true, 'Monthly profit is required']
-  },
+ 
   description: {
     type: String,
     required: [true, 'Description is required']

@@ -7,7 +7,7 @@ import {
   getMiningMachineById,
   updateMiningMachine,
   deleteMiningMachine,
-} from "../controller/MiningContoller.js";
+} from "../controller/MachineCreate.js";
 
 const router = express.Router();
 const storage = multer.memoryStorage();

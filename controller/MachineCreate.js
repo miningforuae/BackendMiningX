@@ -2,6 +2,8 @@ import MiningMachine from "../model/MiningMachine.js";
 import uploadToCloudinary from "../helper/cloudinary.js";
 import { StatusCodes } from "http-status-codes";
 
+// In the controller file
+
 export const createMiningMachine = async (req, res) => {
   try {
     const {
@@ -12,8 +14,7 @@ export const createMiningMachine = async (req, res) => {
       coinsMined,
       monthlyProfit,
       description,
-      ProfitAdmin,
-    } = req.body;
+    } = req.body;  
 
     const imageUrls = [];
     if (req.files && req.files.length > 0) {
@@ -27,11 +28,10 @@ export const createMiningMachine = async (req, res) => {
       machineName,
       hashrate,
       powerConsumption,
-      priceRange,
+      priceRange: Number(priceRange),  // Ensure it's converted to Number
       coinsMined,
-      monthlyProfit,
+      monthlyProfit: Number(monthlyProfit),  // Ensure it's converted to Number
       description,
-      ProfitAdmin,
       images: imageUrls,
     });
 
@@ -97,6 +97,14 @@ export const updateMiningMachine = async (req, res) => {
         success: false,
         message: "Mining machine not found",
       });
+    }
+
+    // Convert priceRange and monthlyProfit to Numbers if they exist in the request
+    if (req.body.priceRange) {
+      req.body.priceRange = Number(req.body.priceRange);
+    }
+    if (req.body.monthlyProfit) {
+      req.body.monthlyProfit = Number(req.body.monthlyProfit);
     }
 
     // Handle new image uploads if any

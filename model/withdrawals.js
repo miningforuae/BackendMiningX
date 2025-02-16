@@ -16,12 +16,12 @@ const transactionSchema = new mongoose.Schema({
     },
     type: {
       type: String,
-      enum: ['withdrawal', 'profit'],
+      enum: ['withdrawal', 'profit', 'MACHINE_PURCHASE', 'MACHINE_SALE'], // Added new types
       required: true
     },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected'],
+      enum: ['pending', 'approved', 'rejected', 'completed'], // Added 'completed'
       default: 'pending'
     },
     adminComment: {

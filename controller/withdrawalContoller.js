@@ -1,8 +1,9 @@
-import mongoose from 'mongoose';
-import User from '../model/UserModel.js';  
-import Transaction from '../model/withdrawals.js';
-import UserMachine from '../model/UserMAchine.js';
-import { sendEmail } from '../helper/emailServer.js';
+import mongoose from "mongoose";
+import User from "../model/UserModel.js";
+import Transaction from "../model/withdrawals.js";
+import UserMachine from "../model/UserMAchine.js";
+import { sendEmail } from "../helper/emailServer.js";
+import Balance from "../model/Balance.js";
 
 // Request a new withdrawal
 export const requestWithdrawal = async (req, res) => {
@@ -14,35 +15,32 @@ export const requestWithdrawal = async (req, res) => {
 
     if (!email || !amount || amount <= 0) {
       await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ message: 'Valid email and amount are required' });
+      return res
+        .status(400)
+        .json({ message: "Valid email and amount are required" });
     }
 
-    // Find user by email
-    const user = await User.findOne({ email: email.toLowerCase() }).session(session);
-    
+    // Find user and balance
+    const user = await User.findOne({ email: email.toLowerCase() }).session(
+      session
+    );
     if (!user) {
       await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ message: 'User not found with provided email' });
+      return res.status(404).json({ message: "User not found" });
     }
 
-    const userMachines = await UserMachine.find({ 
-      user: user._id,
-      status: 'active'
-    }).session(session);
-
-    const totalProfit = userMachines.reduce(
-      (sum, machine) => sum + (machine.monthlyProfitAccumulated || 0), 
-      0
-    );
-
-    if (amount > totalProfit) {
+    const balance = await Balance.findOne({ user: user._id }).session(session);
+    if (!balance) {
       await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ 
-        message: 'Withdrawal amount exceeds available profit',
-        availableProfit: totalProfit
+      return res.status(404).json({ message: "Balance record not found" });
+    }
+
+    // Check available balance
+    if (amount > balance.totalBalance) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        message: "Withdrawal amount exceeds available balance",
+        availableBalance: balance.totalBalance,
       });
     }
 
@@ -50,117 +48,110 @@ export const requestWithdrawal = async (req, res) => {
     const transaction = new Transaction({
       user: user._id,
       amount: amount,
-      type: 'withdrawal',
-      status: 'pending',
-      details: `Withdrawal request of $${amount} from mining profits`
+      type: "withdrawal",
+      status: "pending",
+      balanceBefore: balance.totalBalance,
+      balanceAfter: balance.totalBalance - amount,
+      details: `Withdrawal request of $${amount}`,
     });
 
     await transaction.save({ session });
-
     await session.commitTransaction();
-    session.endSession();
 
-    // Send confirmation email to user
+    // Send email notification
     try {
       await sendEmail(
         user.email,
-        'Withdrawal Request Submitted',
-        'withdrawalRequest',
+        "Withdrawal Request Submitted",
+        "withdrawalRequest",
         {
           userName: `${user.firstName} ${user.lastName}`,
           amount: amount,
           requestDate: new Date().toLocaleString(),
-          transactionId: transaction._id
+          transactionId: transaction._id,
         }
       );
     } catch (emailError) {
-      console.error('Error sending withdrawal request email:', emailError);
+      console.error("Email notification failed:", emailError);
     }
 
-    res.status(200).json({
-      message: 'Withdrawal request submitted successfully',
-      requestedAmount: amount,
-      availableProfit: totalProfit,
+    return res.status(200).json({
+      message: "Withdrawal request submitted successfully",
       transaction: transaction,
-      userEmail: user.email
+      availableBalance: balance.totalBalance,
     });
-
   } catch (error) {
     await session.abortTransaction();
-    session.endSession();
-    console.error('Withdrawal request error:', error);
-    res.status(500).json({ 
-      message: 'Error processing withdrawal request',
-      error: error.message 
+    console.error("Withdrawal request error:", error);
+    return res.status(500).json({
+      message: "Error processing withdrawal request",
+      error: error.message,
     });
+  } finally {
+    session.endSession();
   }
 };
 
+///
 export const processWithdrawalRequest = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
     const { transactionId, action, adminComment } = req.body;
-    const adminId = req.user._id; // Assuming admin user info is in request
+    const adminId = req.user._id;
 
-    if (!['approved', 'rejected'].includes(action)) {
-      return res.status(400).json({ message: 'Invalid action. Must be approved or rejected' });
+    if (!["approved", "rejected"].includes(action)) {
+      return res.status(400).json({ message: "Invalid action" });
     }
 
     const transaction = await Transaction.findById(transactionId)
       .session(session)
-      .populate('user', 'firstName lastName email');
-    
+      .populate("user");
+
     if (!transaction) {
       await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ message: 'Transaction not found' });
+      return res.status(404).json({ message: "Transaction not found" });
     }
 
-    if (transaction.status !== 'pending') {
+    if (transaction.status !== "pending") {
       await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ message: 'Transaction is no longer pending' });
+      return res
+        .status(400)
+        .json({ message: "Transaction is no longer pending" });
     }
 
-    if (action === 'approved') {
-      // Find user's machines and deduct profit
-      const userMachines = await UserMachine.find({ 
-        user: transaction.user._id,
-        status: 'active'
-      }).session(session);
+    const balance = await Balance.findOne({
+      user: transaction.user._id,
+    }).session(session);
 
-      const totalProfit = userMachines.reduce(
-        (sum, machine) => sum + (machine.monthlyProfitAccumulated || 0), 
-        0
-      );
-
-      if (transaction.amount > totalProfit) {
+    if (action === "approved") {
+      if (transaction.amount > balance.totalBalance) {
         await session.abortTransaction();
-        session.endSession();
-        return res.status(400).json({ 
-          message: 'Insufficient funds for withdrawal',
-          availableProfit: totalProfit
+        return res.status(400).json({
+          message: "Insufficient balance",
+          available: balance.totalBalance,
         });
       }
 
-      // Deduct profit from machines
+      // Deduct from balances - first from mining balance then from main if needed
       let remainingAmount = transaction.amount;
-      for (const machine of userMachines) {
-        if (remainingAmount <= 0) break;
 
-        const machineProfit = machine.monthlyProfitAccumulated || 0;
-        const deductAmount = Math.min(machineProfit, remainingAmount);
+      // First deduct from mining balance
+      // Modified withdrawal logic
+      const mainDeduction = Math.min(balance.adminAdd, remainingAmount);
+      balance.maiadminAddnBalance -= mainDeduction;
+      remainingAmount -= mainDeduction;
 
-        machine.monthlyProfitAccumulated -= deductAmount;
-        remainingAmount -= deductAmount;
-
-        await machine.save({ session });
+      if (remainingAmount > 0) {
+        balance.miningBalance -= remainingAmount;
       }
+
+      balance.totalBalance = balance.adminAdd + balance.miningBalance;
+      await balance.save({ session });
     }
 
-    // Update transaction status
+    // Update transaction
     transaction.status = action;
     transaction.adminComment = adminComment;
     transaction.processedBy = adminId;
@@ -168,39 +159,38 @@ export const processWithdrawalRequest = async (req, res) => {
     await transaction.save({ session });
 
     await session.commitTransaction();
-    session.endSession();
 
-    // Send status update email to user
+    // Send email notification
     try {
       await sendEmail(
         transaction.user.email,
         `Withdrawal Request ${action.toUpperCase()}`,
-        'withdrawalStatus',
+        "withdrawalStatus",
         {
           userName: `${transaction.user.firstName} ${transaction.user.lastName}`,
           amount: transaction.amount,
-          status: action.toUpperCase(),
+          status: action,
           transactionId: transaction._id,
-          adminComment: adminComment
+          adminComment: adminComment,
         }
       );
     } catch (emailError) {
-      console.error('Error sending withdrawal status email:', emailError);
+      console.error("Email notification failed:", emailError);
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       message: `Withdrawal request ${action} successfully`,
-      transaction: transaction
+      transaction: transaction,
     });
-
   } catch (error) {
     await session.abortTransaction();
-    session.endSession();
-    console.error('Error processing withdrawal request:', error);
-    res.status(500).json({ 
-      message: 'Error processing withdrawal request',
-      error: error.message 
+    console.error("Withdrawal processing error:", error);
+    return res.status(500).json({
+      message: "Error processing withdrawal request",
+      error: error.message,
     });
+  } finally {
+    session.endSession();
   }
 };
 
@@ -209,31 +199,31 @@ export const getPendingWithdrawals = async (req, res) => {
   try {
     const { page = 1, limit = 20 } = req.query;
 
-    const withdrawals = await Transaction.find({ 
-      type: 'withdrawal',
-      status: 'pending'
+    const withdrawals = await Transaction.find({
+      type: "withdrawal",
+      status: "pending",
     })
       .sort({ transactionDate: -1 })
       .skip((parseInt(page) - 1) * parseInt(limit))
       .limit(parseInt(limit))
-      .populate('user', 'firstName lastName email');
+      .populate("user", "firstName lastName email");
 
-    const total = await Transaction.countDocuments({ 
-      type: 'withdrawal',
-      status: 'pending'
+    const total = await Transaction.countDocuments({
+      type: "withdrawal",
+      status: "pending",
     });
 
     res.status(200).json({
       withdrawals,
       totalPages: Math.ceil(total / parseInt(limit)),
       currentPage: parseInt(page),
-      totalWithdrawals: total
+      totalWithdrawals: total,
     });
   } catch (error) {
-    console.error('Error retrieving pending withdrawals:', error);
-    res.status(500).json({ 
-      message: 'Error retrieving pending withdrawals',
-      error: error.message 
+    console.error("Error retrieving pending withdrawals:", error);
+    res.status(500).json({
+      message: "Error retrieving pending withdrawals",
+      error: error.message,
     });
   }
 };
@@ -247,39 +237,39 @@ export const getUserWithdrawals = async (req, res) => {
 
     // First find the user by email
     const user = await User.findOne({ email: email.toLowerCase() });
-    
+
     if (!user) {
-      return res.status(404).json({ 
-        message: 'User not found with provided email'
+      return res.status(404).json({
+        message: "User not found with provided email",
       });
     }
 
     // Then find their withdrawals using the user's _id
-    const withdrawals = await Transaction.find({ 
+    const withdrawals = await Transaction.find({
       user: user._id,
-      type: 'withdrawal'
+      type: "withdrawal",
     })
       .sort({ transactionDate: -1 })
       .skip((parseInt(page) - 1) * parseInt(limit))
       .limit(parseInt(limit))
-      .populate('user', 'email firstName lastName');
+      .populate("user", "email firstName lastName");
 
-    const total = await Transaction.countDocuments({ 
+    const total = await Transaction.countDocuments({
       user: user._id,
-      type: 'withdrawal'
+      type: "withdrawal",
     });
 
     res.status(200).json({
       withdrawals,
       totalPages: Math.ceil(total / parseInt(limit)),
       currentPage: parseInt(page),
-      totalWithdrawals: total
+      totalWithdrawals: total,
     });
   } catch (error) {
-    console.error('Error retrieving user withdrawals:', error);
-    res.status(500).json({ 
-      message: 'Error retrieving withdrawal history',
-      error: error.message 
+    console.error("Error retrieving user withdrawals:", error);
+    res.status(500).json({
+      message: "Error retrieving withdrawal history",
+      error: error.message,
     });
   }
 };
@@ -292,60 +282,58 @@ export const getWithdrawalStats = async (req, res) => {
       pendingAmount,
       approvedCount,
       approvedAmount,
-      rejectedCount
+      rejectedCount,
     ] = await Promise.all([
-      Transaction.countDocuments({ type: 'withdrawal', status: 'pending' }),
+      Transaction.countDocuments({ type: "withdrawal", status: "pending" }),
       Transaction.aggregate([
-        { $match: { type: 'withdrawal', status: 'pending' }},
-        { $group: { _id: null, total: { $sum: '$amount' }}}
+        { $match: { type: "withdrawal", status: "pending" } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
       ]),
-      Transaction.countDocuments({ type: 'withdrawal', status: 'approved' }),
+      Transaction.countDocuments({ type: "withdrawal", status: "approved" }),
       Transaction.aggregate([
-        { $match: { type: 'withdrawal', status: 'approved' }},
-        { $group: { _id: null, total: { $sum: '$amount' }}}
+        { $match: { type: "withdrawal", status: "approved" } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
       ]),
-      Transaction.countDocuments({ type: 'withdrawal', status: 'rejected' })
+      Transaction.countDocuments({ type: "withdrawal", status: "rejected" }),
     ]);
 
     res.status(200).json({
       pending: {
         count: pendingCount,
-        amount: pendingAmount[0]?.total || 0
+        amount: pendingAmount[0]?.total || 0,
       },
       approved: {
         count: approvedCount,
-        amount: approvedAmount[0]?.total || 0
+        amount: approvedAmount[0]?.total || 0,
       },
       rejected: {
-        count: rejectedCount
-      }
+        count: rejectedCount,
+      },
     });
   } catch (error) {
-    console.error('Error retrieving withdrawal statistics:', error);
-    res.status(500).json({ 
-      message: 'Error retrieving withdrawal statistics',
-      error: error.message 
+    console.error("Error retrieving withdrawal statistics:", error);
+    res.status(500).json({
+      message: "Error retrieving withdrawal statistics",
+      error: error.message,
     });
   }
 };
 
-
 // Add this to your withdrawalController.js file
-
 export const getAllWithdrawals = async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 20, 
-      startDate, 
-      endDate, 
+    const {
+      page = 1,
+      limit = 20,
+      startDate,
+      endDate,
       status,
-      sortBy = 'transactionDate',
-      sortOrder = 'desc'
+      sortBy = "transactionDate",
+      sortOrder = "desc",
     } = req.query;
 
     // Build filter object
-    const filter = { type: 'withdrawal' };
+    const filter = { type: "withdrawal" };
 
     // Add date range filter if provided
     if (startDate || endDate) {
@@ -355,21 +343,21 @@ export const getAllWithdrawals = async (req, res) => {
     }
 
     // Add status filter if provided
-    if (status && ['pending', 'approved', 'rejected'].includes(status)) {
+    if (status && ["pending", "approved", "rejected"].includes(status)) {
       filter.status = status;
     }
 
     // Build sort object
     const sort = {};
-    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    sort[sortBy] = sortOrder === "asc" ? 1 : -1;
 
     // Execute query with pagination
     const withdrawals = await Transaction.find(filter)
       .sort(sort)
       .skip((parseInt(page) - 1) * parseInt(limit))
       .limit(parseInt(limit))
-      .populate('user', 'firstName lastName email')
-      .populate('processedBy', 'firstName lastName email');
+      .populate("user", "firstName lastName email")
+      .populate("processedBy", "firstName lastName email");
 
     // Get total count for pagination
     const total = await Transaction.countDocuments(filter);
@@ -377,7 +365,7 @@ export const getAllWithdrawals = async (req, res) => {
     // Calculate total amount
     const totalAmount = await Transaction.aggregate([
       { $match: filter },
-      { $group: { _id: null, total: { $sum: '$amount' }}}
+      { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
 
     res.status(200).json({
@@ -389,18 +377,56 @@ export const getAllWithdrawals = async (req, res) => {
       filters: {
         startDate,
         endDate,
-        status
+        status,
       },
       sorting: {
         sortBy,
-        sortOrder
-      }
+        sortOrder,
+      },
     });
   } catch (error) {
-    console.error('Error retrieving all withdrawals:', error);
-    res.status(500).json({ 
-      message: 'Error retrieving withdrawals',
-      error: error.message 
+    console.error("Error retrieving all withdrawals:", error);
+    res.status(500).json({
+      message: "Error retrieving withdrawals",
+      error: error.message,
+    });
+  }
+};
+
+// Get balance update history
+export const getBalanceHistory = async (req, res) => {
+  try {
+    const { userId, startDate, endDate, page = 1, limit = 20 } = req.query;
+
+    const filter = {};
+    if (userId) filter.user = userId;
+    if (startDate || endDate) {
+      filter.processedAt = {};
+      if (startDate) filter.processedAt.$gte = new Date(startDate);
+      if (endDate) filter.processedAt.$lte = new Date(endDate);
+    }
+
+    // Get both profit-type transactions (admin updates) and machine profits
+    const transactions = await Transaction.find(filter)
+      .sort({ processedAt: -1 })
+      .skip((parseInt(page) - 1) * parseInt(limit))
+      .limit(parseInt(limit))
+      .populate("user", "firstName lastName email")
+      .populate("processedBy", "firstName lastName email");
+
+    const total = await Transaction.countDocuments(filter);
+
+    res.status(200).json({
+      transactions,
+      totalPages: Math.ceil(total / parseInt(limit)),
+      currentPage: parseInt(page),
+      totalTransactions: total,
+    });
+  } catch (error) {
+    console.error("Error retrieving balance history:", error);
+    res.status(500).json({
+      message: "Error retrieving balance history",
+      error: error.message,
     });
   }
 };

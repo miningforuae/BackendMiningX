@@ -1,621 +1,667 @@
-import UserMachine from '../model/UserMAchine.js';
-import User from '../model/UserModel.js';
-import MiningMachine from '../model/MiningMachine.js';
-import mongoose from 'mongoose';
-import { sendEmail } from '../helper/emailServer.js';
-import Transaction from "../model/withdrawals.js"
+// import UserMachine from '../model/UserMAchine.js';
+// import User from '../model/UserModel.js';
+// import MiningMachine from '../model/MiningMachine.js';
+// import mongoose from 'mongoose';
+// import { sendEmail } from '../helper/emailServer.js';
+// import Transaction from "../model/withdrawals.js"
 
-export const assignMachineToUser = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+// export const assignMachineToUser = async (req, res) => {
+//   const session = await mongoose.startSession();
+//   session.startTransaction();
 
-  try {
-    const { userId, machineId, quantity = 1 } = req.body;
+//   try {
+//     const { userId, machineId, quantity = 1 } = req.body;
 
-    if (!userId || !machineId || quantity < 1) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ message: 'User ID, Machine ID, and valid quantity are required' });
-    }
+//     if (!userId || !machineId || quantity < 1) {
+//       await session.abortTransaction();
+//       session.endSession();
+//       return res.status(400).json({ message: 'User ID, Machine ID, and valid quantity are required' });
+//     }
 
-    const user = await User.findById(userId).session(session);
-    if (!user) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ message: 'User not found' });
-    }
+//     const user = await User.findById(userId).session(session);
+//     if (!user) {
+//       await session.abortTransaction();
+//       session.endSession();
+//       return res.status(404).json({ message: 'User not found' });
+//     }
 
-    const machine = await MiningMachine.findById(machineId).session(session);
-    if (!machine) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ message: 'Machine not found' });
-    }
+//     const machine = await MiningMachine.findById(machineId).session(session);
+//     if (!machine) {
+//       await session.abortTransaction();
+//       session.endSession();
+//       return res.status(404).json({ message: 'Machine not found' });
+//     }
 
-    // Create multiple assignments based on quantity
-    const assignments = [];
-    for (let i = 0; i < quantity; i++) {
-      const userMachine = new UserMachine({
-        user: userId,
-        machine: machineId,
-        assignedDate: new Date(),
-        status: 'active',
-        monthlyProfitAccumulated: 0
-      });
-      assignments.push(userMachine);
-    }
+//     // Create multiple assignments based on quantity
+//     const assignments = [];
+//     for (let i = 0; i < quantity; i++) {
+//       const userMachine = new UserMachine({
+//         user: userId,
+//         machine: machineId,
+//         assignedDate: new Date(),
+//         status: 'active',
+//         monthlyProfitAccumulated: 0
+//       });
+//       assignments.push(userMachine);
+//     }
 
-    await UserMachine.insertMany(assignments, { session });
+//     await UserMachine.insertMany(assignments, { session });
 
-    const emailData = {
-      userName: `${user.firstName} ${user.lastName}`,
-      machineName: machine.machineName.toString(),
-      quantity: quantity,
-      assignedDate: new Date().toLocaleDateString(),
-      machinePrice: machine.priceRange.toString(),
-      monthlyProfit: machine.monthlyProfit.toString(),
-      powerConsumption: machine.powerConsumption.toString()
-    };
-    await sendEmail(
-      user.email,
-      'New Mining Machines Assigned',
-      'machineAssignment',
-      emailData
-    );
+//     const emailData = {
+//       userName: `${user.firstName} ${user.lastName}`,
+//       machineName: machine.machineName.toString(),
+//       quantity: quantity,
+//       assignedDate: new Date().toLocaleDateString(),
+//       machinePrice: machine.priceRange.toString(),
+//       monthlyProfit: machine.monthlyProfit.toString(),
+//       powerConsumption: machine.powerConsumption.toString()
+//     };
+//     await sendEmail(
+//       user.email,
+//       'New Mining Machines Assigned',
+//       'machineAssignment',
+//       emailData
+//     );
 
-    await session.commitTransaction();
-    session.endSession();
+//     await session.commitTransaction();
+//     session.endSession();
 
-    // Populate the response with user and machine details
-    const populatedAssignments = await UserMachine.find({
-      _id: { $in: assignments.map(a => a._id) }
-    })
-      .populate('user', 'firstName lastName email')
-      .populate('machine', 'machineName model');
+//     // Populate the response with user and machine details
+//     const populatedAssignments = await UserMachine.find({
+//       _id: { $in: assignments.map(a => a._id) }
+//     })
+//       .populate('user', 'firstName lastName email')
+//       .populate('machine', 'machineName model');
 
-    res.status(201).json(populatedAssignments);
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    console.error('Machine assignment error:', error);
-    res.status(500).json({ 
-      message: 'Error assigning machines to user',
-      error: error.message 
-    });
-  }
-};
+//     res.status(201).json(populatedAssignments);
+//   } catch (error) {
+//     await session.abortTransaction();
+//     session.endSession();
+//     console.error('Machine assignment error:', error);
+//     res.status(500).json({ 
+//       message: 'Error assigning machines to user',
+//       error: error.message 
+//     });
+//   }
+// };
 
-export const getUserMachines = async (req, res) => {
-  try {
-    const userIdentifier = req.params.userId;
+// export const getUserMachines = async (req, res) => {
+//   try {
+//     const userIdentifier = req.params.userId;
 
-    if (!userIdentifier) {
-      return res.status(400).json({ message: 'User identifier is required' });
-    }
+//     if (!userIdentifier) {
+//       return res.status(400).json({ message: 'User identifier is required' });
+//     }
 
-    let user;
-    // Check if the identifier is a valid MongoDB ObjectId
-    const isValidObjectId = mongoose.Types.ObjectId.isValid(userIdentifier);
+//     let user;
+//     // Check if the identifier is a valid MongoDB ObjectId
+//     const isValidObjectId = mongoose.Types.ObjectId.isValid(userIdentifier);
 
-    if (isValidObjectId) {
-      user = await User.findById(userIdentifier);
-    } else {
-      // If not a valid ObjectId, search by email
-      user = await User.findOne({ email: userIdentifier });
-    }
+//     if (isValidObjectId) {
+//       user = await User.findById(userIdentifier);
+//     } else {
+//       // If not a valid ObjectId, search by email
+//       user = await User.findOne({ email: userIdentifier });
+//     }
 
-    if (!user) {
-      return res.status(404).json({ 
-        message: 'User not found',
-        identifier: userIdentifier 
-      });
-    }
+//     if (!user) {
+//       return res.status(404).json({ 
+//         message: 'User not found',
+//         identifier: userIdentifier 
+//       });
+//     }
 
-    // Now that we have the user, find their machines using the _id
-    const userMachines = await UserMachine.find({ user: user._id })
-      .populate('user', 'firstName lastName email')
-      .populate('machine', 'machineName model');
+//     // Now that we have the user, find their machines using the _id
+//     const userMachines = await UserMachine.find({ user: user._id })
+//       .populate('user', 'firstName lastName email')
+//       .populate('machine', 'machineName model');
 
-    if (userMachines.length === 0) {
-      return res.status(200).json([]); // Return empty array instead of 404
-    }
+//     if (userMachines.length === 0) {
+//       return res.status(200).json([]); // Return empty array instead of 404
+//     }
 
-    res.status(200).json(userMachines);
-  } catch (error) {
-    console.error('Error retrieving user machines:', error);
-    res.status(500).json({ 
-      message: 'Error retrieving user machines',
-      error: error.message 
-    });
-  }
-};
+//     res.status(200).json(userMachines);
+//   } catch (error) {
+//     console.error('Error retrieving user machines:', error);
+//     res.status(500).json({ 
+//       message: 'Error retrieving user machines',
+//       error: error.message 
+//     });
+//   }
+// };
 
-export const removeUserMachine = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+// export const removeUserMachine = async (req, res) => {
+//   const session = await mongoose.startSession();
+//   session.startTransaction();
 
-  try {
-    const { userMachineId } = req.params;
+//   try {
+//     const { userMachineId } = req.params;
 
-    // Validate userMachineId
-    if (!userMachineId) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ message: 'User Machine ID is required' });
-    }
+//     // Validate userMachineId
+//     if (!userMachineId) {
+//       await session.abortTransaction();
+//       session.endSession();
+//       return res.status(400).json({ message: 'User Machine ID is required' });
+//     }
 
-    // Find and remove the user-machine assignment
-    const removedUserMachine = await UserMachine.findByIdAndDelete(userMachineId, { session });
+//     // Find and remove the user-machine assignment
+//     const removedUserMachine = await UserMachine.findByIdAndDelete(userMachineId, { session });
 
-    if (!removedUserMachine) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ message: 'User Machine assignment not found' });
-    }
+//     if (!removedUserMachine) {
+//       await session.abortTransaction();
+//       session.endSession();
+//       return res.status(404).json({ message: 'User Machine assignment not found' });
+//     }
 
-    await session.commitTransaction();
-    session.endSession();
+//     await session.commitTransaction();
+//     session.endSession();
 
-    res.status(200).json({ 
-      message: 'Machine assignment removed successfully',
-      removedUserMachine 
-    });
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
+//     res.status(200).json({ 
+//       message: 'Machine assignment removed successfully',
+//       removedUserMachine 
+//     });
+//   } catch (error) {
+//     await session.abortTransaction();
+//     session.endSession();
 
-    console.error('Error removing user machine:', error);
-    res.status(500).json({ 
-      message: 'Error removing user machine assignment',
-      error: error.message 
-    });
-  }
-};
+//     console.error('Error removing user machine:', error);
+//     res.status(500).json({ 
+//       message: 'Error removing user machine assignment',
+//       error: error.message 
+//     });
+//   }
+// };
 
-export const getAllUserMachines = async (req, res) => {
-  try {
-    // Find all user-machine assignments with populated details
-    const userMachines = await UserMachine.find()
-      .populate('user', 'firstName lastName email')
-      .populate('machine', 'machineName model');
+// export const getAllUserMachines = async (req, res) => {
+//   try {
+//     // Find all user-machine assignments with populated details
+//     const userMachines = await UserMachine.find()
+//       .populate('user', 'firstName lastName email')
+//       .populate('machine', 'machineName model');
 
-    res.status(200).json(userMachines);
-  } catch (error) {
-    console.error('Error retrieving all user machines:', error);
-    res.status(500).json({ 
-      message: 'Error retrieving all user machines',
-      error: error.message 
-    });
-  }
-};
-export const getProfitUpdateStatus = async (req, res) => {
-  try {
-    const { userMachineId } = req.params;
+//     res.status(200).json(userMachines);
+//   } catch (error) {
+//     console.error('Error retrieving all user machines:', error);
+//     res.status(500).json({ 
+//       message: 'Error retrieving all user machines',
+//       error: error.message 
+//     });
+//   }
+// };
+// export const getProfitUpdateStatus = async (req, res) => {
+//   try {
+//     const { userMachineId } = req.params;
 
-    const userMachine = await UserMachine.findById(userMachineId)
-      .populate('machine')
-      .populate('user', 'firstName lastName email');
+//     const userMachine = await UserMachine.findById(userMachineId)
+//       .populate('machine')
+//       .populate('user', 'firstName lastName email');
 
-    if (!userMachine) {
-      return res.status(404).json({ message: 'User machine assignment not found' });
-    }
+//     if (!userMachine) {
+//       return res.status(404).json({ message: 'User machine assignment not found' });
+//     }
 
-    const lastUpdate = userMachine.lastProfitUpdate || userMachine.assignedDate;
-    const currentDate = new Date();
-    // Changed from days to hours
-    const hoursSinceUpdate = Math.floor((currentDate - lastUpdate) / (1000 * 60 * 60));
+//     const lastUpdate = userMachine.lastProfitUpdate || userMachine.assignedDate;
+//     const currentDate = new Date();
+//     // Changed from days to hours
+//     const hoursSinceUpdate = Math.floor((currentDate - lastUpdate) / (1000 * 60 * 60));
 
-    res.status(200).json({
-      userMachineId: userMachine._id,
-      userName: `${userMachine.user.firstName} ${userMachine.user.lastName}`,
-      machineName: userMachine.machine.machineName,
-      lastUpdateDate: lastUpdate,
-      hoursSinceLastUpdate: hoursSinceUpdate,
-      hoursUntilNextUpdate: Math.max(0, 1 - hoursSinceUpdate), // Changed from 30 days to 1 hour
-      currentAccumulatedProfit: userMachine.monthlyProfitAccumulated,
-      status: userMachine.status
-    });
-  } catch (error) {
-    console.error('Error getting profit update status:', error);
-    res.status(500).json({ 
-      message: 'Error getting profit update status',
-      error: error.message 
-    });
-  }
-};
+//     res.status(200).json({
+//       userMachineId: userMachine._id,
+//       userName: `${userMachine.user.firstName} ${userMachine.user.lastName}`,
+//       machineName: userMachine.machine.machineName,
+//       lastUpdateDate: lastUpdate,
+//       hoursSinceLastUpdate: hoursSinceUpdate,
+//       hoursUntilNextUpdate: Math.max(0, 1 - hoursSinceUpdate), // Changed from 30 days to 1 hour
+//       currentAccumulatedProfit: userMachine.monthlyProfitAccumulated,
+//       status: userMachine.status
+//     });
+//   } catch (error) {
+//     console.error('Error getting profit update status:', error);
+//     res.status(500).json({ 
+//       message: 'Error getting profit update status',
+//       error: error.message 
+//     });
+//   }
+// };
 
-export const updateMonthlyProfit = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+// export const updateMonthlyProfit = async (req, res) => {
+//   const session = await mongoose.startSession();
+//   session.startTransaction();
 
-  try {
-    const { userMachineId } = req.params;
+//   try {
+//     const { userMachineId } = req.params;
     
-    const userMachine = await UserMachine.findById(userMachineId)
-      .populate('machine')
-      .session(session);
+//     const userMachine = await UserMachine.findById(userMachineId)
+//       .populate('machine')
+//       .session(session);
 
-    if (!userMachine) {
-      await session.abortTransaction();
-      return res.status(404).json({ message: 'User machine assignment not found' });
-    }
+//     if (!userMachine) {
+//       await session.abortTransaction();
+//       return res.status(404).json({ message: 'User machine assignment not found' });
+//     }
 
-    if (userMachine.status !== 'active') {
-      await session.abortTransaction();
-      return res.status(400).json({ message: 'Machine is not active' });
-    }
+//     if (userMachine.status !== 'active') {
+//       await session.abortTransaction();
+//       return res.status(400).json({ message: 'Machine is not active' });
+//     }
 
-    // Calculate profit since assignment or last update
-    const lastUpdate = userMachine.lastProfitUpdate || userMachine.assignedDate;
-    const currentDate = new Date();
+//     // Calculate profit since assignment or last update
+//     const lastUpdate = userMachine.lastProfitUpdate || userMachine.assignedDate;
+//     const currentDate = new Date();
     
-    // Calculate hours since last update
-    const hoursSinceUpdate = Math.floor(
-      (currentDate.getTime() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60)
-    );
+//     // Calculate hours since last update
+//     const hoursSinceUpdate = Math.floor(
+//       (currentDate.getTime() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60)
+//     );
 
-    // Debug logging
-    console.log('Profit Update Debug:', {
-      machineId: userMachineId,
-      lastUpdate: lastUpdate,
-      currentDate: currentDate,
-      hoursSinceUpdate: hoursSinceUpdate,
-      currentAccumulatedProfit: userMachine.monthlyProfitAccumulated,
-      machineProfit: userMachine.machine.ProfitAdmin
-    });
+//     // Debug logging
+//     console.log('Profit Update Debug:', {
+//       machineId: userMachineId,
+//       lastUpdate: lastUpdate,
+//       currentDate: currentDate,
+//       hoursSinceUpdate: hoursSinceUpdate,
+//       currentAccumulatedProfit: userMachine.monthlyProfitAccumulated,
+//       machineProfit: userMachine.machine.ProfitAdmin
+//     });
 
-    if (hoursSinceUpdate >= 1) {
-      const profitPerHour = userMachine.machine.ProfitAdmin / 24; // Daily profit divided by 24 hours
-      const profitToAdd = profitPerHour * hoursSinceUpdate;
+//     if (hoursSinceUpdate >= 1) {
+//       const profitPerHour = userMachine.machine.ProfitAdmin / 24; // Daily profit divided by 24 hours
+//       const profitToAdd = profitPerHour * hoursSinceUpdate;
       
-      userMachine.monthlyProfitAccumulated += profitToAdd;
-      userMachine.lastProfitUpdate = currentDate;
+//       userMachine.monthlyProfitAccumulated += profitToAdd;
+//       userMachine.lastProfitUpdate = currentDate;
 
-      await userMachine.save({ session });
-      await session.commitTransaction();
+//       await userMachine.save({ session });
+//       await session.commitTransaction();
 
-      return res.status(200).json({
-        message: 'Profit updated successfully',
-        hoursProcessed: hoursSinceUpdate,
-        profitAdded: profitToAdd,
-        newTotal: userMachine.monthlyProfitAccumulated,
-        nextUpdateIn: '1 hour'
-      });
-    } else {
-      await session.commitTransaction();
-      return res.status(200).json({
-        message: 'Too soon for next update',
-        minutesUntilNextUpdate: 60 - ((hoursSinceUpdate * 60) % 60),
-        currentProfit: userMachine.monthlyProfitAccumulated
-      });
-    }
-  } catch (error) {
-    await session.abortTransaction();
-    console.error('Profit update error:', error);
-    return res.status(500).json({ 
-      message: 'Error updating profit',
-      error: error.message 
-    });
-  } finally {
-    session.endSession();
-  }
-};
+//       return res.status(200).json({
+//         message: 'Profit updated successfully',
+//         hoursProcessed: hoursSinceUpdate,
+//         profitAdded: profitToAdd,
+//         newTotal: userMachine.monthlyProfitAccumulated,
+//         nextUpdateIn: '1 hour'
+//       });
+//     } else {
+//       await session.commitTransaction();
+//       return res.status(200).json({
+//         message: 'Too soon for next update',
+//         minutesUntilNextUpdate: 60 - ((hoursSinceUpdate * 60) % 60),
+//         currentProfit: userMachine.monthlyProfitAccumulated
+//       });
+//     }
+//   } catch (error) {
+//     await session.abortTransaction();
+//     console.error('Profit update error:', error);
+//     return res.status(500).json({ 
+//       message: 'Error updating profit',
+//       error: error.message 
+//     });
+//   } finally {
+//     session.endSession();
+//   }
+// };
 
 
-export const manualProfitUpdate = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+// export const manualProfitUpdate = async (req, res) => {
+//   const session = await mongoose.startSession();
+//   session.startTransaction();
 
-  try {
-    const { userMachineId } = req.params;
-    const { profitAmount } = req.body;
+//   try {
+//     const { userMachineId } = req.params;
+//     const { profitAmount } = req.body;
 
-    if (!profitAmount || isNaN(profitAmount)) {
-      await session.abortTransaction();
-      return res.status(400).json({ message: 'Valid profit amount is required' });
-    }
+//     if (!profitAmount || isNaN(profitAmount)) {
+//       await session.abortTransaction();
+//       return res.status(400).json({ message: 'Valid profit amount is required' });
+//     }
 
-    const userMachine = await UserMachine.findById(userMachineId).session(session);
+//     const userMachine = await UserMachine.findById(userMachineId).session(session);
 
-    if (!userMachine) {
-      await session.abortTransaction();
-      return res.status(404).json({ message: 'User machine assignment not found' });
-    }
+//     if (!userMachine) {
+//       await session.abortTransaction();
+//       return res.status(404).json({ message: 'User machine assignment not found' });
+//     }
 
-    userMachine.monthlyProfitAccumulated += Number(profitAmount);
-    userMachine.lastProfitUpdate = new Date();
+//     userMachine.monthlyProfitAccumulated += Number(profitAmount);
+//     userMachine.lastProfitUpdate = new Date();
 
-    await userMachine.save({ session });
-    await session.commitTransaction();
+//     await userMachine.save({ session });
+//     await session.commitTransaction();
 
-    res.status(200).json({
-      message: 'Profit manually updated successfully',
-      profitAdded: profitAmount,
-      newTotal: userMachine.monthlyProfitAccumulated
-    });
-  } catch (error) {
-    await session.abortTransaction();
-    console.error('Error in manual profit update:', error);
-    res.status(500).json({ 
-      message: 'Error updating profit manually',
-      error: error.message 
-    });
-  } finally {
-    session.endSession();
-  }
-};
+//     res.status(200).json({
+//       message: 'Profit manually updated successfully',
+//       profitAdded: profitAmount,
+//       newTotal: userMachine.monthlyProfitAccumulated
+//     });
+//   } catch (error) {
+//     await session.abortTransaction();
+//     console.error('Error in manual profit update:', error);
+//     res.status(500).json({ 
+//       message: 'Error updating profit manually',
+//       error: error.message 
+//     });
+//   } finally {
+//     session.endSession();
+//   }
+// };
 
-export const processWithdrawal = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+// ///purchase machine by user
+// export const purchaseAndAssignMachine = async (req, res) => {
+//   const session = await mongoose.startSession();
+//   session.startTransaction();
 
-  try {
-    const { email, amount } = req.body;
+//   try {
+//     const { userId, machineId, quantity = 1 } = req.body;
 
-    if (!email || !amount || amount <= 0) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ message: 'Valid email and amount are required' });
-    }
+//     if (!userId || !machineId || quantity < 1) {
+//       await session.abortTransaction();
+//       return res.status(400).json({ message: 'User ID, Machine ID, and valid quantity are required' });
+//     }
 
-    // Find user by email
-    const user = await User.findOne({ email: email.toLowerCase() }).session(session);
+//     // Find user, machine and balance
+//     const [user, machine, balance] = await Promise.all([
+//       User.findById(userId).session(session),
+//       MiningMachine.findById(machineId).session(session),
+//       Balance.findOne({ user: userId }).session(session)
+//     ]);
+
+//     if (!user || !machine || !balance) {
+//       await session.abortTransaction();
+//       return res.status(404).json({ 
+//         message: 'User, machine, or balance record not found' 
+//       });
+//     }
+
+//     // Calculate total cost
+//     const totalCost = machine.priceRange * quantity;
+
+//     // Check if user has sufficient balance
+//     if (balance.mainBalance < totalCost) {
+//       await session.abortTransaction();
+//       return res.status(400).json({ 
+//         message: 'Insufficient balance',
+//         required: totalCost,
+//         current: balance.mainBalance
+//       });
+//     }
+
+//     // Create purchase transaction
+//     const transaction = new Transaction({
+//       user: userId,
+//       amount: totalCost,
+//       type: 'MACHINE_PURCHASE',
+//       status: 'completed',
+//       balanceBefore: balance.totalBalance,
+//       balanceAfter: balance.totalBalance - totalCost,
+//       metadata: {
+//         machineId: machine._id,
+//         machineName: machine.machineName,
+//         quantity: quantity,
+//         pricePerUnit: machine.priceRange
+//       }
+//     });
+
+//     // Update balance
+//     balance.mainBalance -= totalCost;
+//     balance.totalBalance = balance.mainBalance + balance.miningBalance;
+//     balance.lastUpdated = new Date();
+
+//     // Create machine assignments
+//     const assignments = Array(quantity).fill().map(() => ({
+//       user: userId,
+//       machine: machineId,
+//       assignedDate: new Date(),
+//       status: 'active',
+//       monthlyProfitAccumulated: 0
+//     }));
+
+//     // Save all changes
+//     await Transaction.create([transaction], { session });
+//     await balance.save({ session });
+//     const userMachines = await UserMachine.create(assignments, { session });
+
+//     await session.commitTransaction();
+
+//     // Send email notification
+//     try {
+//       await sendEmail(
+//         user.email,
+//         'Mining Machine Purchase Confirmation',
+//         'machinePurchase',
+//         {
+//           userName: `${user.firstName} ${user.lastName}`,
+//           machineName: machine.machineName,
+//           quantity: quantity,
+//           totalCost: totalCost,
+//           remainingBalance: balance.mainBalance,
+//           machineDetails: {
+//             price: machine.priceRange,
+//             monthlyProfit: machine.monthlyProfit,
+//             powerConsumption: machine.powerConsumption
+//           }
+//         }
+//       );
+//     } catch (emailError) {
+//       console.error('Email notification failed:', emailError);
+//     }
+
+//     // Return populated response
+//     const populatedMachines = await UserMachine.find({
+//       _id: { $in: userMachines.map(m => m._id) }
+//     })
+//       .populate('user', 'firstName lastName email')
+//       .populate('machine', 'machineName model priceRange monthlyProfit');
+
+//     return res.status(201).json({
+//       message: 'Machine(s) purchased and assigned successfully',
+//       machines: populatedMachines,
+//       transaction: {
+//         id: transaction._id,
+//         totalCost,
+//         newBalance: balance.mainBalance
+//       }
+//     });
+
+//   } catch (error) {
+//     await session.abortTransaction();
+//     console.error('Machine purchase error:', error);
+//     return res.status(500).json({ 
+//       message: 'Error purchasing machines',
+//       error: error.message 
+//     });
+//   } finally {
+//     session.endSession();
+//   }
+// };
+// // Add this route to check if user can afford a machine
+// export const checkPurchaseEligibility = async (req, res) => {
+//   try {
+//     const { userId, machineId, quantity = 1 } = req.query;
+
+//     if (!userId || !machineId) {
+//       return res.status(400).json({ message: 'User ID and Machine ID are required' });
+//     }
+
+//     const user = await User.findById(userId);
+//     const machine = await MiningMachine.findById(machineId);
+
+//     if (!user) {
+//       return res.status(404).json({ message: 'User not found' });
+//     }
+
+//     if (!machine) {
+//       return res.status(404).json({ message: 'Machine not found' });
+//     }
+
+//     const totalCost = machine.priceRange * quantity;
+//     const canAfford = user.mainBalance >= totalCost;
+
+//     res.status(200).json({
+//       canPurchase: canAfford,
+//       userBalance: user.mainBalance,
+//       requiredAmount: totalCost,
+//       shortfall: canAfford ? 0 : totalCost - user.mainBalance,
+//       machine: {
+//         name: machine.machineName,
+//         pricePerUnit: machine.priceRange,
+//         quantity: quantity
+//       }
+//     });
+
+//   } catch (error) {
+//     console.error('Eligibility check error:', error);
+//     res.status(500).json({ 
+//       message: 'Error checking purchase eligibility',
+//       error: error.message 
+//     });
+//   }
+// };
+
+
+// export const sellUserMachine = async (req, res) => {
+//   const session = await mongoose.startSession();
+//   session.startTransaction();
+
+//   try {
+//     const { userMachineId } = req.params;
     
-    if (!user) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ message: 'User not found with provided email' });
-    }
+//     // Find user machine with populated details
+//     const userMachine = await UserMachine.findById(userMachineId)
+//       .populate('user')
+//       .populate('machine')
+//       .session(session);
 
-    // Calculate total available profit
-    const userMachines = await UserMachine.find({ 
-      user: user._id,
-      status: 'active'
-    }).session(session);
+//     if (!userMachine) {
+//       await session.abortTransaction();
+//       return res.status(404).json({ message: 'User machine not found' });
+//     }
 
-    const totalProfit = userMachines.reduce(
-      (sum, machine) => sum + (machine.monthlyProfitAccumulated || 0), 
-      0
-    );
+//     // Verify machine is active
+//     if (userMachine.status !== 'active') {
+//       await session.abortTransaction();
+//       return res.status(400).json({ message: 'Cannot sell inactive machine' });
+//     }
 
-    if (amount > totalProfit) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ 
-        message: 'Withdrawal amount exceeds available profit',
-        availableProfit: totalProfit
-      });
-    }
+//     // Calculate selling price (90% of original price)
+//     const originalPrice = userMachine.machine.priceRange;
+//     const sellingPrice = originalPrice * 0.9;
+//     const deduction = originalPrice * 0.1;
 
-    // Deduct profit from machines
-    let remainingAmount = amount;
-    for (const machine of userMachines) {
-      if (remainingAmount <= 0) break;
+//     // Find user's balance
+//     const balance = await Balance.findOne({ user: userMachine.user._id }).session(session);
+//     if (!balance) {
+//       await session.abortTransaction();
+//       return res.status(404).json({ message: 'User balance not found' });
+//     }
 
-      const machineProfit = machine.monthlyProfitAccumulated || 0;
-      const deductAmount = Math.min(machineProfit, remainingAmount);
+//     // Create sale transaction record
+//     const saleTransaction = new Transaction({
+//       user: userMachine.user._id,
+//       amount: sellingPrice,
+//       type: 'MACHINE_SALE',
+//       status: 'completed',
+//       balanceBefore: balance.totalBalance,
+//       balanceAfter: balance.totalBalance + sellingPrice,
+//       metadata: {
+//         machineId: userMachine.machine._id,
+//         machineName: userMachine.machine.machineName,
+//         originalPrice: originalPrice,
+//         deduction: deduction,
+//         sellingPrice: sellingPrice
+//       }
+//     });
 
-      machine.monthlyProfitAccumulated -= deductAmount;
-      remainingAmount -= deductAmount;
+//     // Update user's balance
+//     balance.mainBalance += sellingPrice;
+//     balance.totalBalance = balance.mainBalance + balance.miningBalance;
+//     balance.lastUpdated = new Date();
 
-      await machine.save({ session });
-    }
+//     // Set machine status to inactive
+//     userMachine.status = 'inactive';
 
-    // Create transaction record
-    const transaction = new Transaction({
-      user: user._id,
-      amount: amount,
-      type: 'withdrawal',
-      details: `Withdrawal of ${amount} from mining profits`
-    });
+//     // Save all changes
+//     await saleTransaction.save({ session });
+//     await balance.save({ session });
+//     await userMachine.save({ session });
 
-    await transaction.save({ session });
+//     await session.commitTransaction();
 
-    // Send confirmation email
- 
+//     // Send email notification
+//     try {
+//       await sendEmail(
+//         userMachine.user.email,
+//         'Machine Sale Confirmation',
+//         'machineSale',
+//         {
+//           machineName: userMachine.machine.machineName,
+//           originalPrice: originalPrice,
+//           deduction: deduction,
+//           sellingPrice: sellingPrice,
+//           newBalance: balance.totalBalance
+//         }
+//       );
+//     } catch (emailError) {
+//       console.error('Email notification failed:', emailError);
+//     }
 
-    await session.commitTransaction();
-    session.endSession();
+//     return res.status(200).json({
+//       message: 'Machine sold successfully',
+//       sale: {
+//         originalPrice,
+//         deduction,
+//         sellingPrice,
+//         machineDetails: {
+//           name: userMachine.machine.machineName,
+//           id: userMachine.machine._id
+//         }
+//       },
+//       transaction: saleTransaction,
+//       newBalance: {
+//         total: balance.totalBalance,
+//         main: balance.mainBalance,
+//         mining: balance.miningBalance
+//       }
+//     });
 
-    res.status(200).json({
-      message: 'Withdrawal processed successfully',
-      withdrawnAmount: amount,
-      remainingProfit: totalProfit - amount,
-      transaction: transaction,
-      userEmail: user.email
-    });
+//   } catch (error) {
+//     await session.abortTransaction();
+//     console.error('Machine sale error:', error);
+//     return res.status(500).json({ 
+//       message: 'Error processing machine sale',
+//       error: error.message 
+//     });
+//   } finally {
+//     session.endSession();
+//   }
+// };
 
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    console.error('Withdrawal error:', error);
-    res.status(500).json({ 
-      message: 'Error processing withdrawal',
-      error: error.message 
-    });
-  }
-};
-// Get user's transaction history
-export const getUserTransactions = async (req, res) => {
-  try {
-    // Change userId to userIdentifier to match route parameter
-    const userIdentifier = req.params.userIdentifier;  // Changed from userId
-    const { page = 1, limit = 10 } = req.query;
-   
-    console.log('Searching for user with identifier:', userIdentifier);
-   
-    if (!userIdentifier) {
-      return res.status(400).json({
-        message: 'User identifier is required',
-      });
-    }
+// export const getSaleHistory = async (req, res) => {
+//   try {
+//     const { userId } = req.params;
 
-    let user;
-    if (mongoose.Types.ObjectId.isValid(userIdentifier)) {
-      user = await User.findById(userIdentifier);
-      console.log('Searched by ObjectId:', user ? 'found' : 'not found');
-    } else {
-      const decodedIdentifier = decodeURIComponent(userIdentifier).trim().toLowerCase();
-      user = await User.findOne({
-        email: { $regex: new RegExp(`^${decodedIdentifier}$`, 'i') }
-      });
-      console.log('Searched by email:', user ? 'found' : 'not found');
-    }
+//     const sales = await Transaction.find({
+//       user: userId,
+//       type: 'MACHINE_SALE'
+//     }).sort({ createdAt: -1 });
 
-    if (!user) {
-      console.log('No user found. Attempted identifier:', userIdentifier);
-      
-      // For debugging
-      const allUsers = await User.find({}, 'email');
-      console.log('Available users in database:', allUsers.map(u => u.email));
-      
-      return res.status(404).json({
-        message: 'User not found',
-        identifier: userIdentifier
-      });
-    }
+//     return res.status(200).json({
+//       sales: sales.map(sale => ({
+//         transactionId: sale._id,
+//         date: sale.createdAt,
+//         machineName: sale.metadata.machineName,
+//         originalPrice: sale.metadata.originalPrice,
+//         deduction: sale.metadata.deduction,
+//         sellingPrice: sale.metadata.sellingPrice,
+//         balanceBefore: sale.balanceBefore,
+//         balanceAfter: sale.balanceAfter
+//       }))
+//     });
 
-    const transactions = await Transaction.find({ user: user._id })
-      .sort({ transactionDate: -1 })
-      .skip((parseInt(page) - 1) * parseInt(limit))
-      .limit(parseInt(limit))
-      .populate('user', 'firstName lastName email');
-
-    const total = await Transaction.countDocuments({ user: user._id });
-
-    res.status(200).json({
-      transactions,
-      totalPages: Math.ceil(total / parseInt(limit)),
-      currentPage: parseInt(page),
-      totalTransactions: total,
-      user: {
-        id: user._id,
-        email: user.email,
-        name: `${user.firstName} ${user.lastName}`
-      }
-    });
-  } catch (error) {
-    console.error('Error retrieving transaction history:', error);
-    res.status(500).json({
-      message: 'Error retrieving transaction history',
-      error: error.message
-    });
-  }
-};
-// Get all transactions (for admin panel)
-export const getAllTransactions = async (req, res) => {
-  try {
-    const { page = 1, limit = 20, sortBy = 'transactionDate', order = 'desc' } = req.query;
-
-    const transactions = await Transaction.find()
-      .sort({ [sortBy]: order })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .populate('user', 'firstName lastName email');
-
-    const total = await Transaction.countDocuments();
-
-    res.status(200).json({
-      transactions,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
-      totalTransactions: total
-    });
-  } catch (error) {
-    console.error('Error retrieving all transactions:', error);
-    res.status(500).json({ 
-      message: 'Error retrieving transactions',
-      error: error.message 
-    });
-  }
-};
-
-// Get user's current total profit (updated version)
-export const getUserTotalProfit = async (req, res) => {
-  try {
-    const userIdentifier = req.params.userIdentifier;
-    
-    console.log('=== Get User Total Profit API ===');
-    console.log('Received identifier:', userIdentifier);
-
-    // Input validation
-    if (!userIdentifier) {
-      return res.status(400).json({
-        message: 'User identifier is required'
-      });
-    }
-
-    let user;
-    // Check if the identifier is a valid MongoDB ObjectId
-    if (mongoose.Types.ObjectId.isValid(userIdentifier)) {
-      user = await User.findById(userIdentifier);
-    } else {
-      // If not a valid ObjectId, try email lookup
-      const decodedIdentifier = decodeURIComponent(userIdentifier);
-      console.log('Looking up user by email:', decodedIdentifier);
-      user = await User.findOne({ email: decodedIdentifier.toLowerCase() }); // Add toLowerCase()
-    }
-
-    // Early return if user not found
-    if (!user) {
-      console.log('User not found for identifier:', userIdentifier);
-      return res.status(404).json({
-        message: 'User not found',
-        identifier: userIdentifier
-      });
-    }
-
-    console.log('Found user:', user._id);
-
-    // Find active machines for user
-    const userMachines = await UserMachine.find({
-      user: user._id,
-      status: 'active'
-    }).populate('machine');
-
-    console.log('Found machines count:', userMachines.length);
-
-    let totalProfit = 0;
-    const machineDetails = [];
-
-    for (const machine of userMachines) {
-      // Ensure machine exists and has required properties
-      if (!machine.machine) {
-        console.log('Warning: Machine reference missing for UserMachine:', machine._id);
-        continue;
-      }
-
-      const profit = machine.monthlyProfitAccumulated || 0;
-      totalProfit += profit;
-      
-      machineDetails.push({
-        machineId: machine.machine._id,
-        machineName: machine.machine.machineName || 'Unknown Machine',
-        profit: profit,
-        assignedDate: machine.assignedDate,
-        lastProfitUpdate: machine.lastProfitUpdate || machine.assignedDate
-      });
-    }
-
-    const response = {
-      userId: user._id,
-      userEmail: user.email,
-      userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown User',
-      totalMachines: userMachines.length,
-      totalProfit: totalProfit,
-      machines: machineDetails.sort((a, b) => b.profit - a.profit)
-    };
-
-    console.log('Sending response:', { ...response, machines: `[${response.machines.length} items]` });
-
-    res.status(200).json(response);
-
-  } catch (error) {
-    console.error('Error in getUserTotalProfit:', error);
-    res.status(500).json({
-      message: 'Error calculating total profit',
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
-  }
-};
+//   } catch (error) {
+//     console.error('Error fetching sale history:', error);
+//     return res.status(500).json({ 
+//       message: 'Error retrieving sale history',
+//       error: error.message 
+//     });
+//   }
+// };

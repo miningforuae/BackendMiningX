@@ -6,7 +6,8 @@ import {
   getPendingWithdrawals,
   getUserWithdrawals,
   getWithdrawalStats,
-  getAllWithdrawals
+  getAllWithdrawals,
+  getBalanceHistory,
 } from '../controller/withdrawalContoller.js';
 
 const router = express.Router();
@@ -18,4 +19,9 @@ router.get('/withdrawals/pending', protect, adminMiddleware, getPendingWithdrawa
 router.get('/withdrawals/by-email', protect, getUserWithdrawals);router.get('/withdrawals/stats', protect, adminMiddleware, getWithdrawalStats);
 // Add this to your existing router
 router.get('/withdrawals/all', protect, adminMiddleware, getAllWithdrawals);
+
+
+
+//blance update routes
+router.get('/balanceUpade/history', protect, getBalanceHistory);
 export default router;

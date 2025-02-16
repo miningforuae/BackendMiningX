@@ -1,35 +1,57 @@
-import express from 'express';
-import { protect, adminMiddleware } from '../middleware/authMiddleware.js';
-import {
-  assignMachineToUser,
-  getUserMachines,
-  updateMonthlyProfit,
-  removeUserMachine,
-  getAllUserMachines,
-  getProfitUpdateStatus,
-  manualProfitUpdate,
-  // Add new imports
-  processWithdrawal,
-  getUserTransactions,
-  getAllTransactions,
-  getUserTotalProfit
-} from '../controller/UserMachine.js';
+import express from "express";
+import { protect, adminMiddleware } from "../middleware/authMiddleware.js";
+import { assignMachineToUser, getAllUserMachines, getUserMachines, removeUserMachine } from "../controller/usermachine/machineController.js";
+import { getProfitUpdateStatus, manualProfitUpdate, updateMonthlyProfit } from "../controller/usermachine/profitController.js";
+import { checkPurchaseEligibility, getSaleHistory, purchaseAndAssignMachine, sellUserMachine } from "../controller/usermachine/transactionController.js";
+import { getBalance, updateBalance } from "../controller/balanceController.js";
 
 const router = express.Router();
+/**
+ * SECTION 1: Machine Management Routes
+ * Handles basic CRUD operations for machine assignments
+ */
+router.route("/assign").post(protect, adminMiddleware, assignMachineToUser);
 
-// Existing routes
-router.post('/assign', protect, adminMiddleware, assignMachineToUser);
-router.get('/userMachine/:userId', protect, getUserMachines);
-router.get('/admin/all', protect, adminMiddleware, getAllUserMachines);
-router.get('/profit/status/:userMachineId', protect, adminMiddleware, getProfitUpdateStatus);
-router.patch('/profit/manual/:userMachineId', protect, adminMiddleware, manualProfitUpdate);
-router.patch('/profit/:userMachineId', protect, adminMiddleware, updateMonthlyProfit);
-router.delete('/:userMachineId', protect, adminMiddleware, removeUserMachine);
+router.route("/userMachine/:userId").get(protect, getUserMachines);
 
-// New routes for withdrawal and transactions
-router.post('/withdrawal', protect, processWithdrawal);  // User can withdraw
-router.get('/transactions/:userIdentifier', protect, getUserTransactions);
-router.get('/admin/transactions', protect, adminMiddleware, getAllTransactions);  // Admin can view all transactions
-router.get('/total-profit/:userIdentifier', protect, getUserTotalProfit);
+router.route("/admin/all").get(protect, adminMiddleware, getAllUserMachines);
 
+router
+  .route("/:userMachineId")
+  .delete(protect, adminMiddleware, removeUserMachine);
+
+/**
+ * SECTION 2: Profit Management Routes
+ * Handles profit tracking, updates, and status checks
+ */
+router
+  .route("/profit/status/:userMachineId")
+  .get(protect, getProfitUpdateStatus);
+
+router
+  .route("/profit/manual/:userMachineId")
+  .patch(protect, adminMiddleware, manualProfitUpdate);
+
+router.route("/profit/:userMachineId").patch(protect, updateMonthlyProfit);
+
+/**
+ * SECTION 3: Transaction Management Routes
+ * Handles purchases, sales, and related financial operations
+ */
+router.route("/purchase").post(protect, purchaseAndAssignMachine);
+
+router.route("/check-eligibility").get(protect, checkPurchaseEligibility);
+
+router.route("/sell/:userMachineId").post(protect, sellUserMachine);
+
+router.route("/sales-history/:userId").get(protect, getSaleHistory);
+
+
+
+//balnce
+router.route("/balance/:userId")
+  .get(protect, getBalance);
+
+router.route("/balance/update")
+  .post(protect, adminMiddleware, updateBalance);
 export default router;

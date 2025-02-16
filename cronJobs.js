@@ -18,7 +18,7 @@ const updateMonthlyProfit = async (userMachineId) => {
       return;
     }
 
-    const machineProfit = userMachine.machine.ProfitAdmin;
+    const machineProfit = userMachine.machine.monthlyProfit;
     const lastUpdate = userMachine.lastProfitUpdate || userMachine.assignedDate;
     const currentDate = new Date();
     
@@ -65,7 +65,7 @@ export const setupAutoProfitUpdates = () => {
         );
 
         if (hoursSinceUpdate >= 1) {
-          const profitPerHour = machine.machine.ProfitAdmin / 24;
+          const profitPerHour = machine.machine.monthlyProfit ;
           const profitToAdd = profitPerHour * hoursSinceUpdate;
 
           machine.monthlyProfitAccumulated += profitToAdd;
