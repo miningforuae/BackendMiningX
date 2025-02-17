@@ -1,7 +1,7 @@
 import express from "express";
 import { protect, adminMiddleware } from "../middleware/authMiddleware.js";
 import { assignMachineToUser, getAllUserMachines, getUserMachines, removeUserMachine } from "../controller/usermachine/machineController.js";
-import { getProfitUpdateStatus, manualProfitUpdate, updateMonthlyProfit } from "../controller/usermachine/profitController.js";
+import { getMachineProfitPercentages, getProfitUpdateStatus, manualProfitUpdate, updateMonthlyProfit } from "../controller/usermachine/profitController.js";
 import { checkPurchaseEligibility, getSaleHistory, purchaseAndAssignMachine, sellUserMachine } from "../controller/usermachine/transactionController.js";
 import { getBalance, updateBalance } from "../controller/balanceController.js";
 
@@ -54,4 +54,13 @@ router.route("/balance/:userId")
 
 router.route("/balance/update")
   .post(protect, adminMiddleware, updateBalance);
+
+
+
+  // Add to your routes file
+router.route("/profit/percentages/:userId")
+.get(protect, getMachineProfitPercentages);
+
 export default router;
+
+

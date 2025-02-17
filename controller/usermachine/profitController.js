@@ -150,3 +150,53 @@ export const manualProfitUpdate = async (req, res) => {
     session.endSession();
   }
 };
+
+// Add to profitController.js
+export const getMachineProfitPercentages = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Get all active machines for the user with their accumulated profits
+    const userMachines = await UserMachine.find({
+      user: userId,
+      status: 'active'
+    }).populate('machine', 'machineName monthlyProfit');
+
+    if (!userMachines || userMachines.length === 0) {
+      return res.status(200).json({
+        machines: [],
+        totalProfit: 0
+      });
+    }
+
+    // Calculate total profit across all machines
+    const totalProfit = userMachines.reduce((sum, machine) => 
+      sum + machine.monthlyProfitAccumulated, 0);
+
+    // Calculate percentage for each machine
+    const machinePercentages = userMachines.map(machine => ({
+      machineId: machine._id,
+      machineName: machine.machineName,
+      profit: machine.monthlyProfitAccumulated,
+      percentage: totalProfit > 0 
+        ? ((machine.monthlyProfitAccumulated / totalProfit) * 100).toFixed(2)
+        : 0,
+      monthlyProfitRate: machine.monthlyProfit,
+      lastUpdate: machine.lastProfitUpdate || machine.assignedDate
+    }));
+
+    res.status(200).json({
+      machines: machinePercentages,
+      totalProfit: totalProfit,
+      machineCount: userMachines.length,
+      timestamp: new Date()
+    });
+
+  } catch (error) {
+    console.error('Error calculating profit percentages:', error);
+    res.status(500).json({ 
+      message: 'Error calculating profit percentages', 
+      error: error.message 
+    });
+  }
+};
