@@ -8,16 +8,23 @@ export const updateBalance = async (req, res) => {
   session.startTransaction();
 
   try {
-    const { userId, amount, type, balanceType = 'mining' } = req.body; // Add balanceType with default
+    const { userId, amount, type } = req.body;
     
-    if (!['withdrawal', 'profit'].includes(type)) {
-      throw new Error('Invalid transaction type');
+    // Validate the amount
+    if (!amount || amount <= 0) {
+      await session.abortTransaction();
+      return res.status(400).json({ message: 'Invalid amount' });
     }
 
-    const balance = await Balance.findOne({ user: userId }).session(session);
+    // Find or create balance record
+    let balance = await Balance.findOne({ user: userId }).session(session);
     if (!balance) {
-      await session.abortTransaction();
-      return res.status(404).json({ message: 'Balance record not found' });
+      balance = new Balance({
+        user: userId,
+        totalBalance: 0,
+        adminAdd: 0,
+        miningBalance: 0
+      });
     }
 
     // Create transaction record
@@ -25,38 +32,32 @@ export const updateBalance = async (req, res) => {
       user: userId,
       amount: Math.abs(amount),
       type: type,
-      status: type === 'withdrawal' ? 'pending' : 'approved',
-      details: `${type} transaction of $${amount}`,
+      status: 'approved',
+      details: `Admin balance add: $${amount}`,
       transactionDate: new Date()
     });
 
-    // For profit transactions, update balance based on balanceType
-    if (type === 'profit') {
-      if (balanceType === 'admin') {
-        balance.adminAdd += amount;
-      } else {
-        balance.miningBalance += amount;
-      }
-      
-      balance.totalBalance = balance.adminAdd + balance.miningBalance;
-      balance.lastUpdated = new Date();
-      
-      await transaction.save({ session });
-      await balance.save({ session });
-      
-      await session.commitTransaction();
+    // Update only adminAdd balance
+    balance.adminAdd += amount;
+    balance.totalBalance = balance.adminAdd + balance.miningBalance;
+    balance.lastUpdated = new Date();
 
-      return res.status(200).json({
-        message: `${balanceType === 'admin' ? 'Admin' : 'Mining'} profit added successfully`,
-        balances: {
-          total: balance.totalBalance,
-          main: balance.adminAdd,
-          mining: balance.miningBalance
-        },
-        transaction: transaction
-      });
-    }
-    // ... rest of the code remains the same
+    // Save changes
+    await transaction.save({ session });
+    await balance.save({ session });
+    
+    await session.commitTransaction();
+
+    return res.status(200).json({
+      message: 'Admin balance added successfully',
+      balances: {
+        total: balance.totalBalance,
+        admin: balance.adminAdd,
+        mining: balance.miningBalance
+      },
+      transaction: transaction
+    });
+
   } catch (error) {
     await session.abortTransaction();
     console.error('Balance update error:', error);
@@ -68,6 +69,7 @@ export const updateBalance = async (req, res) => {
     session.endSession();
   }
 };
+
 
 // Add this new controller for processing withdrawal requests
 export const processWithdrawal = async (req, res) => {
