@@ -73,12 +73,20 @@ export const purchaseSpecialShares = async (req, res) => {
       });
     }
 
-    // Find the special machine
-    const machine = await MiningMachine.findOne({
-      isShareBased: true,
-      priceRange: 19000,
-      sharePrice: 50
-    }).session(session);
+    // Find the special machine with a write lock to prevent race conditions
+    const machine = await MiningMachine.findOneAndUpdate(
+      {
+        isShareBased: true,
+        priceRange: 19000,
+        sharePrice: 50
+      },
+      { $set: { lastChecked: new Date() } }, // Dummy update to acquire lock
+      { 
+        session,
+        new: true,
+        runValidators: true
+      }
+    );
 
     if (!machine) {
       await session.abortTransaction();
@@ -88,9 +96,10 @@ export const purchaseSpecialShares = async (req, res) => {
       });
     }
 
-    // Check share availability
+    // Check share availability with proper locking
     const soldShares = await SharePurchase.countDocuments({
-      machine: machine._id
+      machine: machine._id,
+      status: 'active'
     }).session(session);
     
     const availableShares = machine.totalShares - soldShares;
@@ -110,9 +119,19 @@ export const purchaseSpecialShares = async (req, res) => {
     const expectedMonthlyProfit = monthlyProfitPerShare * numberOfShares;
 
     // Check if user has enough balance
-    let balance = await Balance.findOne({ user: userId }).session(session);
+    let balance = await Balance.findOneAndUpdate(
+      { user: userId },
+      { $set: { lastChecked: new Date() } }, // Dummy update to acquire lock
+      { 
+        session,
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true
+      }
+    );
+
     if (!balance) {
-      // Create balance if not exists
+      // Create balance if not exists (though upsert should handle this)
       balance = new Balance({
         user: userId,
         totalBalance: 0,
@@ -217,7 +236,6 @@ export const purchaseSpecialShares = async (req, res) => {
     session.endSession();
   }
 };
-
 // Update profits for all share purchases (run this daily)
 export const updateAllShareProfits = async (req, res) => {
   const session = await mongoose.startSession();

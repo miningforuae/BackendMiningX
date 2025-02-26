@@ -38,7 +38,7 @@ router.route("/profit/:userMachineId").patch(protect, updateMonthlyProfit);
  * SECTION 3: Transaction Management Routes
  * Handles purchases, sales, and related financial operations
  */
-router.route("/purchase").post(protect, purchaseAndAssignMachine);
+router.route("/purchaseMAchine").post(protect, purchaseAndAssignMachine);
 
 router.route("/check-eligibility").get(protect, checkPurchaseEligibility);
 
