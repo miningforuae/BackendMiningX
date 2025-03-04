@@ -175,13 +175,12 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
   }
 });
 
-// Update your logout controller to use POST
-// Update your logoutUser function to match login cookie settings
+
 export const logoutUser = asyncHandler(async (req, res) => {
   const cookieOptions = {
     httpOnly: true,
-    secure: true, // Must be true for cross-origin cookies
-    sameSite: 'none', // Required for cross-origin
+    secure: true, 
+    sameSite: 'none', 
     path: '/',
   };
   
