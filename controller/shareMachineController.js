@@ -353,7 +353,6 @@ export const updateAllShareProfits = async (req, res) => {
   }
 };
 
-// Get user's share purchases and summary
 
 export const getUserShareDetails = async (req, res) => {
   try {
@@ -426,5 +425,177 @@ export const getUserShareDetails = async (req, res) => {
       message: "Error retrieving share details",
       error: error.message
     });
+  }
+};
+
+
+// Sell shares of a mining machine
+export const sellSharePurchase = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { sharePurchaseId } = req.params;
+    const { numberOfSharesToSell } = req.body;
+    
+    // Validate numberOfSharesToSell is provided and is a positive number
+    if (!numberOfSharesToSell || numberOfSharesToSell < 1) {
+      await session.abortTransaction();
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: "Valid number of shares to sell is required"
+      });
+    }
+    
+    // Find the share purchase with related documents
+    const sharePurchase = await SharePurchase.findById(sharePurchaseId)
+      .populate('user')
+      .populate('machine')
+      .session(session);
+
+    if (!sharePurchase) {
+      await session.abortTransaction();
+      return res.status(StatusCodes.NOT_FOUND).json({
+        success: false, 
+        message: 'Share purchase not found'
+      });
+    }
+
+    if (sharePurchase.status !== 'active') {
+      await session.abortTransaction();
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: 'Cannot sell inactive shares'
+      });
+    }
+    
+    // Ensure user isn't trying to sell more shares than they own
+    if (numberOfSharesToSell > sharePurchase.numberOfShares) {
+      await session.abortTransaction();
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: `You only own ${sharePurchase.numberOfShares} shares`
+      });
+    }
+
+    // Calculate selling price with 10% deduction
+    const originalValue = sharePurchase.pricePerShare * numberOfSharesToSell;
+    const sellingPrice = originalValue * 0.9;
+    const deduction = originalValue * 0.1;
+
+    // Find user balance
+    const balance = await Balance.findOne({ user: sharePurchase.user._id }).session(session);
+    if (!balance) {
+      await session.abortTransaction();
+      return res.status(StatusCodes.NOT_FOUND).json({
+        success: false,
+        message: 'User balance not found'
+      });
+    }
+
+    // Create transaction record
+    const saleTransaction = await Transaction.create([{
+      user: sharePurchase.user._id,
+      amount: sellingPrice,
+      type: 'SHARE_SALE',
+      status: 'completed',
+      balanceBefore: balance.totalBalance,
+      balanceAfter: balance.totalBalance + sellingPrice,
+      details: `Sold ${numberOfSharesToSell} shares of ${sharePurchase.machine.machineName}`,
+      transactionDate: new Date(),
+      metadata: {
+        machineId: sharePurchase.machine._id,
+        machineName: sharePurchase.machine.machineName,
+        shareId: sharePurchase._id,
+        originalShares: sharePurchase.numberOfShares,
+        soldShares: numberOfSharesToSell,
+        originalValue: originalValue,
+        deduction: deduction,
+        sellingPrice: sellingPrice
+      }
+    }], { session });
+
+    // Update user balance
+    balance.adminAdd += sellingPrice;
+    balance.totalBalance = balance.adminAdd + balance.miningBalance;
+    balance.lastUpdated = new Date();
+    await balance.save({ session });
+
+    // Handle partial or complete share sales
+    if (numberOfSharesToSell === sharePurchase.numberOfShares) {
+      // All shares sold - mark as inactive
+      sharePurchase.status = 'inactive';
+      await sharePurchase.save({ session });
+    } else {
+      // Partial sale - reduce share count and update total investment
+      const remainingShares = sharePurchase.numberOfShares - numberOfSharesToSell;
+      const remainingInvestment = sharePurchase.pricePerShare * remainingShares;
+      
+      sharePurchase.numberOfShares = remainingShares;
+      sharePurchase.totalInvestment = remainingInvestment;
+      await sharePurchase.save({ session });
+    }
+
+    await session.commitTransaction();
+
+    // Send email confirmation
+    try {
+      const emailData = {
+        userName: `${sharePurchase.user.firstName} ${sharePurchase.user.lastName}`,
+        machineName: sharePurchase.machine.machineName,
+        soldShares: numberOfSharesToSell,
+        originalValue: originalValue,
+        deduction: deduction,
+        sellingPrice: sellingPrice,
+        newBalance: balance.totalBalance,
+        remainingShares: sharePurchase.numberOfShares,
+        date: new Date().toLocaleDateString()
+      };
+      
+      await sendEmail(
+        sharePurchase.user.email,
+        'Share Sale Confirmation',
+        'shareSaleConfirmation',
+        emailData
+      );
+    } catch (emailError) {
+      console.error('Email notification failed:', emailError);
+      // Continue even if email fails
+    }
+
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      message: 'Shares sold successfully',
+      data: {
+        sale: {
+          originalValue,
+          deduction,
+          sellingPrice,
+          soldShares: numberOfSharesToSell,
+          remainingShares: sharePurchase.numberOfShares,
+          machineDetails: {
+            name: sharePurchase.machine.machineName,
+            id: sharePurchase.machine._id
+          }
+        },
+        transaction: saleTransaction[0],
+        newBalance: {
+          total: balance.totalBalance,
+          main: balance.adminAdd,
+          mining: balance.miningBalance
+        }
+      }
+    });
+
+  } catch (error) {
+    await session.abortTransaction();
+    console.error('Share sale error:', error);
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Error processing share sale',
+      error: error.message
+    });
+  } finally {
+    session.endSession();
   }
 };
