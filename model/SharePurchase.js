@@ -41,6 +41,10 @@ const sharePurchaseSchema = new mongoose.Schema({
     type: String,
     enum: ['active', 'inactive'],
     default: 'active'
+  },
+  totalProfitEarned: {  
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true

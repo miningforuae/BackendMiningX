@@ -1,61 +1,19 @@
 import cron from 'node-cron';
 import UserMachine from './model/UserMAchine.js';
+import SharePurchase from './model/SharePurchase.js';
+import Balance from './model/Balance.js';
+import Transaction from './model/withdrawals.js';
 import mongoose from 'mongoose';
-
-const BATCH_SIZE = 100;
-
-const updateMonthlyProfit = async (userMachineId) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  
-  try {
-    const userMachine = await UserMachine.findById(userMachineId)
-      .populate('machine')
-      .session(session);
-
-    if (!userMachine || userMachine.status !== 'active') {
-      await session.abortTransaction();
-      return;
-    }
-
-    const machineProfit = userMachine.machine.monthlyProfit;
-    const lastUpdate = userMachine.lastProfitUpdate || userMachine.assignedDate;
-    const currentDate = new Date();
-    
-    // Changed to hours
-    const hoursSinceUpdate = Math.floor(
-      (currentDate - lastUpdate) / (1000 * 60 * 60)
-    );
-
-    if (hoursSinceUpdate >= 1) {  // Check if at least 1 hour has passed
-      const periodsToUpdate = hoursSinceUpdate;  // Each hour is a period
-      
-      userMachine.monthlyProfitAccumulated += (machineProfit * periodsToUpdate);
-      userMachine.lastProfitUpdate = new Date();
-
-      await userMachine.save({ session });
-      console.log(`Updated profit for machine ${userMachineId}: +${machineProfit * periodsToUpdate}`);
-    }
-
-    await session.commitTransaction();
-    return { updated: hoursSinceUpdate >= 1, userMachineId };
-  } catch (error) {
-    await session.abortTransaction();
-    console.error(`Error updating profit for machine ${userMachineId}:`, error);
-    return { updated: false, userMachineId, error };
-  } finally {
-    session.endSession();
-  }
-};
 
 export const setupAutoProfitUpdates = () => {
   // Run every hour
   cron.schedule('0 * * * *', async () => {
     console.log('Starting automated profit update:', new Date());
-    
+
+
     try {
-      const userMachines = await UserMachine.find({ status: 'active' })
-        .populate('machine');
+      // ✅ Normal Machine Profit Update
+      const userMachines = await UserMachine.find({ status: 'active' }).populate('machine');
 
       for (const machine of userMachines) {
         const lastUpdate = machine.lastProfitUpdate || machine.assignedDate;
@@ -65,18 +23,65 @@ export const setupAutoProfitUpdates = () => {
         );
 
         if (hoursSinceUpdate >= 1) {
-          const profitPerHour = machine.machine.monthlyProfit ;
+          const profitPerHour = machine.machine.monthlyProfit;
           const profitToAdd = profitPerHour * hoursSinceUpdate;
 
           machine.monthlyProfitAccumulated += profitToAdd;
           machine.lastProfitUpdate = currentDate;
 
           await machine.save();
-          
+
           console.log(`Updated profit for machine ${machine._id}:`, {
             hoursProcessed: hoursSinceUpdate,
             profitAdded: profitToAdd,
             newTotal: machine.monthlyProfitAccumulated
+          });
+        }
+      }
+
+      // ✅ Share Machine Profit Update
+      console.log('Starting share machine profit update:', new Date());
+
+      const activeShares = await SharePurchase.find({ status: 'active' }).populate('machine');
+
+      for (const share of activeShares) {
+        const lastUpdate = share.lastProfitUpdate || share.purchaseDate;
+        const currentDate = new Date();
+        const hoursSinceUpdate = Math.floor(
+          (currentDate.getTime() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60)
+        );
+
+        if (hoursSinceUpdate >= 1) {
+          const profitPerHour = share.profitPerShare ; 
+          const profitToAdd = profitPerHour * share.numberOfShares * hoursSinceUpdate;
+
+          // Update user balance
+          let userBalance = await Balance.findOne({ user: share.user });
+          if (!userBalance) {
+            userBalance = new Balance({ user: share.user, miningBalance: 0 });
+          }
+          userBalance.miningBalance += profitToAdd;
+          userBalance.lastUpdated = currentDate;
+          await userBalance.save();
+
+          // Record the transaction
+          await Transaction.create({
+            user: share.user,
+            amount: profitToAdd,
+            transactionDate: currentDate,
+            type: 'SHARE_PROFIT',
+            status: 'completed',
+            details: `Profit added for ${hoursSinceUpdate} hour(s) from shared machine`
+          });
+
+          // Update the last profit update time
+          share.lastProfitUpdate = currentDate;
+          await share.save();
+
+          console.log(`Updated share profit for user ${share.user}:`, {
+            hoursProcessed: hoursSinceUpdate,
+            profitAdded: profitToAdd,
+            newBalance: userBalance.miningBalance
           });
         }
       }

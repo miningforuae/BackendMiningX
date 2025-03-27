@@ -73,7 +73,7 @@ export const purchaseSpecialShares = async (req, res) => {
       });
     }
 
-    // Find the special machine with a write lock to prevent race conditions
+    console.log("Session:", session);
     const machine = await MiningMachine.findOneAndUpdate(
       {
         isShareBased: true,
@@ -87,6 +87,7 @@ export const purchaseSpecialShares = async (req, res) => {
         runValidators: true
       }
     );
+    console.log("Machine:", machine);
 
     if (!machine) {
       await session.abortTransaction();
@@ -245,7 +246,6 @@ export const updateAllShareProfits = async (req, res) => {
     const currentDate = new Date();
     const oneDayAgo = new Date(currentDate - 24 * 60 * 60 * 1000);
 
-    // Find all active shares that haven't been updated in the last 24 hours
     const eligibleShares = await SharePurchase.find({
       status: 'active',
       lastProfitUpdate: { $lt: oneDayAgo }
@@ -263,27 +263,23 @@ export const updateAllShareProfits = async (req, res) => {
     const updates = [];
     
     for (const share of eligibleShares) {
-      // Calculate profit for this share
       const profitAmount = share.numberOfShares * share.profitPerShare;
       
-      // Find user's balance
       const balance = await Balance.findOne({ user: share.user._id }).session(session);
-      if (!balance) {
-        console.error(`Balance not found for user ${share.user._id}`);
-        continue;  // Skip this share
-      }
-      
-      // Update mining balance with profits
+      if (!balance) continue;
+
+      // Update balances
       balance.miningBalance += profitAmount;
       balance.totalBalance = balance.adminAdd + balance.miningBalance;
       balance.lastUpdated = currentDate;
       await balance.save({ session });
-      
-      // Update share last profit date
+
+      // Update share purchase record with cumulative profit
+      share.totalProfitEarned += profitAmount; // 👈 Critical update
       share.lastProfitUpdate = currentDate;
       await share.save({ session });
-      
-      // Create transaction record for profit
+
+      // Record transaction
       await Transaction.create([{
         user: share.user._id,
         amount: profitAmount,
@@ -291,7 +287,7 @@ export const updateAllShareProfits = async (req, res) => {
         status: 'completed',
         balanceBefore: balance.totalBalance - profitAmount,
         balanceAfter: balance.totalBalance,
-        details: `Profit from ${share.numberOfShares} shares`,
+        details: `Daily profit from ${share.numberOfShares} shares`,
         transactionDate: currentDate,
         metadata: {
           shareId: share._id,
@@ -299,36 +295,12 @@ export const updateAllShareProfits = async (req, res) => {
           profitPerShare: share.profitPerShare
         }
       }], { session });
-      
+
       updates.push({
-        userId: share.user._id,
-        userName: `${share.user.firstName} ${share.user.lastName}`,
-        email: share.user.email,
-        shares: share.numberOfShares,
-        profitAmount: profitAmount,
-        newMiningBalance: balance.miningBalance
+        shareId: share._id,
+        profitAdded: profitAmount,
+        totalProfit: share.totalProfitEarned // 👈 Now tracking cumulative
       });
-      
-      // Optionally send email notification
-      try {
-        const emailData = {
-          userName: `${share.user.firstName} ${share.user.lastName}`,
-          profitAmount: profitAmount.toFixed(2),
-          shares: share.numberOfShares,
-          newBalance: balance.totalBalance.toFixed(2),
-          date: currentDate.toLocaleDateString()
-        };
-        
-        await sendEmail(
-          share.user.email,
-          'Mining Share Profit Update',
-          'shareProfitUpdate',
-          emailData
-        );
-      } catch (emailError) {
-        console.error("Email sending failed:", emailError);
-        // Continue even if email fails
-      }
     }
 
     await session.commitTransaction();
@@ -365,12 +337,11 @@ export const getUserShareDetails = async (req, res) => {
       });
     }
     
-    // Get all shares owned by user
     const shares = await SharePurchase.find({
       user: userId,
       status: 'active'
-    }).populate('machine', 'machineName hashrate powerConsumption');
-    
+    }).populate('machine', 'machineName sharePrice profitPerShare');
+
     if (!shares || shares.length === 0) {
       return res.status(StatusCodes.OK).json({
         success: true,
@@ -379,41 +350,48 @@ export const getUserShareDetails = async (req, res) => {
           summary: {
             totalShares: 0,
             totalInvestment: 0,
+            totalProfitEarned: 0,
             expectedMonthlyProfit: 0
           }
         }
       });
     }
     
-    // Calculate summary
-    const totalShares = shares.reduce((sum, share) => sum + share.numberOfShares, 0);
-    const totalInvestment = shares.reduce((sum, share) => sum + share.totalInvestment, 0);
-    const expectedMonthlyProfit = shares.reduce(
-      (sum, share) => sum + (share.numberOfShares * share.profitPerShare), 0
-    );
-    
-    // Format share details
+    // Calculate summary statistics
+    const summary = shares.reduce((acc, share) => {
+      acc.totalShares += share.numberOfShares;
+      acc.totalInvestment += share.totalInvestment;
+      acc.totalProfitEarned += share.totalProfitEarned;
+      acc.expectedMonthlyProfit += share.numberOfShares * share.profitPerShare * 30;
+      return acc;
+    }, {
+      totalShares: 0,
+      totalInvestment: 0,
+      totalProfitEarned: 0,
+      expectedMonthlyProfit: 0
+    });
+
+    // Format individual share details
     const shareDetails = shares.map(share => ({
       id: share._id,
       machineName: share.machine.machineName,
       numberOfShares: share.numberOfShares,
       pricePerShare: share.pricePerShare,
-      totalInvestment: share.totalInvestment,
       profitPerShare: share.profitPerShare,
-      expectedMonthlyProfit: share.numberOfShares * share.profitPerShare,
+      totalInvestment: share.totalInvestment,
+      totalProfitEarned: share.totalProfitEarned, 
       purchaseDate: share.purchaseDate,
       lastProfitUpdate: share.lastProfitUpdate,
-      nextProfitUpdate: new Date(share.lastProfitUpdate.getTime() + 24 * 60 * 60 * 1000)
+      nextProfitUpdate: new Date(share.lastProfitUpdate.getTime() + 60 * 60 * 1000)
     }));
-    
+
     return res.status(StatusCodes.OK).json({
       success: true,
       data: {
         shares: shareDetails,
         summary: {
-          totalShares,
-          totalInvestment,
-          expectedMonthlyProfit
+          ...summary,
+          expectedMonthlyProfit: Number(summary.expectedMonthlyProfit.toFixed(2))
         }
       }
     });
