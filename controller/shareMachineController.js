@@ -244,11 +244,11 @@ export const updateAllShareProfits = async (req, res) => {
 
   try {
     const currentDate = new Date();
-    const oneDayAgo = new Date(currentDate - 24 * 60 * 60 * 1000);
+    const oneHourAgo = new Date(currentDate - 60 * 60 * 1000); // 👈 Changed from 24h to 1h
 
     const eligibleShares = await SharePurchase.find({
       status: 'active',
-      lastProfitUpdate: { $lt: oneDayAgo }
+      lastProfitUpdate: { $lt: oneHourAgo }
     }).populate('user').session(session);
 
     if (eligibleShares.length === 0) {
@@ -362,7 +362,7 @@ export const getUserShareDetails = async (req, res) => {
       acc.totalShares += share.numberOfShares;
       acc.totalInvestment += share.totalInvestment;
       acc.totalProfitEarned += share.totalProfitEarned;
-      acc.expectedMonthlyProfit += share.numberOfShares * share.profitPerShare * 30;
+      acc.expectedMonthlyProfit += share.numberOfShares * share.profitPerShare ;
       return acc;
     }, {
       totalShares: 0,
