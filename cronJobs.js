@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import UserMachine from './model/UserMachine.js';
+import UserMachine from './model/UserMAchine.js';
 import SharePurchase from './model/SharePurchase.js';
 import Balance from './model/Balance.js';
 import Transaction from './model/withdrawals.js';
