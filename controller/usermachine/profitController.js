@@ -18,7 +18,7 @@ export const getProfitUpdateStatus = async (req, res) => {
 
     const lastUpdate = userMachine.lastProfitUpdate || userMachine.assignedDate;
     const currentDate = new Date();
-    const hoursSinceUpdate = Math.floor((currentDate - lastUpdate) / (1000 * 60 * 60));
+    const hoursSinceUpdate = Math.floor((currentDate - lastUpdate) / (1000 * 60 * 60 * 24));
 
     res.status(200).json({
       userMachineId: userMachine._id,
@@ -26,7 +26,7 @@ export const getProfitUpdateStatus = async (req, res) => {
       machineName: userMachine.machine.machineName,
       lastUpdateDate: lastUpdate,
       hoursSinceLastUpdate: hoursSinceUpdate,
-      hoursUntilNextUpdate: Math.max(0, 1 - hoursSinceUpdate),
+      hoursUntilNextUpdate: Math.max(0, 30 - hoursSinceUpdate),
       currentAccumulatedProfit: userMachine.monthlyProfitAccumulated,
       status: userMachine.status
     });
@@ -57,12 +57,12 @@ export const updateMonthlyProfit = async (req, res) => {
     const lastUpdate = userMachine.lastProfitUpdate || userMachine.assignedDate;
     const currentDate = new Date();
     const hoursSinceUpdate = Math.floor(
-      (currentDate - lastUpdate) / (1000 * 60 * 60)
+      (currentDate - lastUpdate) / (1000 * 60 * 60 * 24)
     );
 
-    if (hoursSinceUpdate >= 1) {
-      const profitPerHour = userMachine.machine.monthlyProfit ;
-      const profitToAdd = profitPerHour * hoursSinceUpdate;
+    if (hoursSinceUpdate >= 30) {
+      const profitToAdd = userMachine.machine.monthlyProfit;
+
       
       // Update machine's accumulated profit
       userMachine.monthlyProfitAccumulated += profitToAdd;
@@ -99,8 +99,8 @@ export const updateMonthlyProfit = async (req, res) => {
       await session.abortTransaction();
       return res.status(200).json({
         message: 'Too soon for next update',
-        minutesUntilNextUpdate: 60 - ((hoursSinceUpdate * 60) % 60)
-      });
+        daysUntilNextUpdate: 30 - daysSinceUpdate,
+        nextUpdateDate: new Date(lastUpdate.getTime() + (30 * 24 * 60 * 60 * 1000))      });
     }
   } catch (error) {
     await session.abortTransaction();

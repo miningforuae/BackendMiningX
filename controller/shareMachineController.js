@@ -244,11 +244,12 @@ export const updateAllShareProfits = async (req, res) => {
 
   try {
     const currentDate = new Date();
-    const oneHourAgo = new Date(currentDate - 60 * 60 * 1000); // 👈 Changed from 24h to 1h
+    // Changed from 1 hour to 30 days
+    const thirtyDaysAgo = new Date(currentDate - 30 * 24 * 60 * 60 * 1000);
 
     const eligibleShares = await SharePurchase.find({
       status: 'active',
-      lastProfitUpdate: { $lt: oneHourAgo }
+      lastProfitUpdate: { $lt: thirtyDaysAgo }
     }).populate('user').session(session);
 
     if (eligibleShares.length === 0) {
@@ -263,6 +264,7 @@ export const updateAllShareProfits = async (req, res) => {
     const updates = [];
     
     for (const share of eligibleShares) {
+      // This is now the full monthly profit
       const profitAmount = share.numberOfShares * share.profitPerShare;
       
       const balance = await Balance.findOne({ user: share.user._id }).session(session);
@@ -275,7 +277,7 @@ export const updateAllShareProfits = async (req, res) => {
       await balance.save({ session });
 
       // Update share purchase record with cumulative profit
-      share.totalProfitEarned += profitAmount; // 👈 Critical update
+      share.totalProfitEarned += profitAmount;
       share.lastProfitUpdate = currentDate;
       await share.save({ session });
 
@@ -287,7 +289,7 @@ export const updateAllShareProfits = async (req, res) => {
         status: 'completed',
         balanceBefore: balance.totalBalance - profitAmount,
         balanceAfter: balance.totalBalance,
-        details: `Daily profit from ${share.numberOfShares} shares`,
+        details: `Monthly profit from ${share.numberOfShares} shares`,
         transactionDate: currentDate,
         metadata: {
           shareId: share._id,
@@ -299,7 +301,7 @@ export const updateAllShareProfits = async (req, res) => {
       updates.push({
         shareId: share._id,
         profitAdded: profitAmount,
-        totalProfit: share.totalProfitEarned // 👈 Now tracking cumulative
+        totalProfit: share.totalProfitEarned
       });
     }
 
@@ -382,7 +384,7 @@ export const getUserShareDetails = async (req, res) => {
       totalProfitEarned: share.totalProfitEarned, 
       purchaseDate: share.purchaseDate,
       lastProfitUpdate: share.lastProfitUpdate,
-      nextProfitUpdate: new Date(share.lastProfitUpdate.getTime() + 60 * 60 * 1000)
+      nextProfitUpdate: new Date(share.lastProfitUpdate.getTime() + 30 * 24 * 60 * 60 * 1000)
     }));
 
     return res.status(StatusCodes.OK).json({
