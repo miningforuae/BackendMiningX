@@ -50,8 +50,14 @@ export const createMiningMachine = async (req, res) => {
 
 export const getAllMiningMachines = async (req, res) => {
   try {
-    const miningMachines = await MiningMachine.find().sort("-createdAt");
+    const miningMachines = await MiningMachine.find({
+      $or: [
+        { isShareBased: false },
+        { isShareBased: { $exists: false } }
+      ]
+    }).sort("-createdAt");
 
+    
     res.status(StatusCodes.OK).json({
       success: true,
       count: miningMachines.length,
